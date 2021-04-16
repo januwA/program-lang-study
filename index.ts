@@ -1,5 +1,5 @@
 import * as readline from "readline";
-import { run } from "./basic";
+import { run } from "./src/basic";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -14,3 +14,5 @@ const waitForUserInput = function () {
 };
 
 waitForUserInput();
+
+// run("(1+2)*3");
