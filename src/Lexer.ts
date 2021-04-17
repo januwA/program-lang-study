@@ -1,17 +1,15 @@
-import { Token, TT } from "./Token";
+import { KEYWORD, Token, TT } from "./Token";
 
 /**
  * 将源码字符串解析为Token表
  */
 export class Lexer {
   pos: number = 0;
-  constructor(private text: string) { }
+  constructor(private text: string) {}
 
   get c(): string {
-    if (this.pos >= this.text.length)
-      return "\0";
-    else
-      return this.text[this.pos];
+    if (this.pos >= this.text.length) return "\0";
+    else return this.text[this.pos];
   }
 
   private next() {
@@ -28,55 +26,190 @@ export class Lexer {
   }
 
   nextToken(): Token {
-    if (/\d/.test(this.c)) {
-      const posStart = this.pos;
-      let val: string = "";
-      while (/\d/.test(this.c)) {
-        val += this.c;
-        this.next();
-      }
-      return new Token(TT.NUMBER, posStart, val);
-    }
-
-    if (this.c === " ") {
-      const posStart = this.pos;
-      let val: string = "";
-      while (this.c === " ") {
-        val += this.c;
-        this.next();
-      }
-      return new Token(TT.SPACE, posStart, val);
-    }
-
-    if (this.c === "+") {
-      return new Token(TT.PLUS, this.pos++, "+");
-    }
-    if (this.c === "-") {
-      return new Token(TT.MINUS, this.pos++, "-");
-    }
-    if (this.c === "*") {
-      return new Token(TT.MUL, this.pos++, "*");
-    }
-    if (this.c === "/") {
-      return new Token(TT.DIV, this.pos++, "/");
-    }
-    if (this.c === "(") {
-      return new Token(TT.LPAREN, this.pos++, "(");
-    }
-    if (this.c === ")") {
-      return new Token(TT.RPAREN, this.pos++, ")");
-    }
-    if (this.c === "[") {
-      return new Token(TT.LSQUARE, this.pos++, "[");
-    }
-    if (this.c === "]") {
-      return new Token(TT.RSQUARE, this.pos++, "]");
-    }
-
     if (this.pos >= this.text.length) {
       return new Token(TT.EOF, this.pos, "");
     }
 
-    throw `Char Error: ${this.c}`;
+    if (/[\d\.]/.test(this.c)) {
+      return this.makeNumber();
+    }
+
+    if (/\w/.test(this.c)) {
+      const posStart = this.pos;
+      let type = TT.IDENTIFIER;
+      let val: string = "";
+      while (/\w/.test(this.c)) {
+        val += this.c;
+        this.next();
+      }
+
+      if (KEYWORD.includes(val)) type = TT.KEYWORD;
+      return new Token(type, posStart, val);
+    }
+
+    switch (this.c) {
+      case " ": {
+        const posStart = this.pos;
+        let val: string = "";
+        while (this.c === " ") {
+          val += this.c;
+          this.next();
+        }
+        return new Token(TT.SPACE, posStart, val);
+      }
+      case "%":
+        return new Token(TT.REMAINDER, this.pos++, "%");
+      case "~":
+        return new Token(TT.BNOT, this.pos++, "~");
+      case "+":
+        return new Token(TT.PLUS, this.pos++, "+");
+      case "-":
+        return new Token(TT.MINUS, this.pos++, "-");
+      case "*": {
+        this.next();
+        if ((this.c as string) === "*") {
+          return new Token(TT.POW, this.pos++, "**");
+        } else {
+          return new Token(TT.MUL, this.pos, "*");
+        }
+      }
+      case "/":
+        return new Token(TT.DIV, this.pos++, "/");
+      case "(":
+        return new Token(TT.LPAREN, this.pos++, "(");
+      case ")":
+        return new Token(TT.RPAREN, this.pos++, ")");
+      case "[":
+        return new Token(TT.LSQUARE, this.pos++, "[");
+      case "]":
+        return new Token(TT.RSQUARE, this.pos++, "]");
+      case "!": {
+        this.next();
+        if ((this.c as string) === "=") {
+          return new Token(TT.NE, this.pos++, "!=");
+        } else {
+          return new Token(TT.NOT, this.pos, "!");
+        }
+      }
+      case "^":
+        return new Token(TT.XOR, this.pos++, "^");
+      case "<": {
+        this.next();
+        if ((this.c as string) === "=") {
+          return new Token(TT.LTE, this.pos++, "<=");
+        } else if ((this.c as string) === "<") {
+          return new Token(TT.SHL, this.pos++, "<<");
+        } else {
+          return new Token(TT.LT, this.pos, "<");
+        }
+      }
+      case ">": {
+        this.next();
+        if ((this.c as string) === "=") {
+          return new Token(TT.GTE, this.pos++, ">=");
+        } else if ((this.c as string) === ">") {
+          return new Token(TT.SHR, this.pos++, ">>");
+        } else {
+          return new Token(TT.GT, this.pos, ">");
+        }
+      }
+      case "=": {
+        this.next();
+        if ((this.c as string) === "=") {
+          return new Token(TT.EE, this.pos++, "==");
+        } else {
+          return new Token(TT.EQ, this.pos, "=");
+        }
+      }
+      case "&": {
+        this.next();
+        if (this.c === "&") {
+          return new Token(TT.AND, this.pos++, "&&");
+        } else {
+          return new Token(TT.BAND, this.pos, "&");
+        }
+      }
+      case "|": {
+        this.next();
+        if (this.c === "|") {
+          return new Token(TT.OR, this.pos++, "||");
+        } else {
+          return new Token(TT.BOR, this.pos, "|");
+        }
+      }
+      default:
+        throw `Char Error: ${this.c}`;
+    }
+  }
+
+  /**
+   * number 语法
+   * https://www.nasm.us/xdoc/2.15.05/html/nasmdoc3.html#section-3.2#section-3.4.1
+   */
+  private makeNumber(): Token {
+    const posStart = this.pos;
+    let type = TT.DEC;
+
+    let val: string = "";
+    let isFloat = false;
+
+    if (this.c === "0") {
+      val += this.c;
+      this.next();
+
+      if ((this.c as string) === "x" || (this.c as string) === "h") {
+        // 0xc8, 0hc8
+        this.next();
+        type = TT.HEX;
+      } else if ((this.c as string) === "d") {
+        // 0d200
+        this.next();
+        type = TT.DEC;
+      } else if ((this.c as string) === "o" || (this.c as string) === "q") {
+        // 0o310, 0q310
+        this.next();
+        type = TT.OCT;
+      } else if ((this.c as string) === "b" || (this.c as string) === "y") {
+        // 0b1100_1000, 0y1100_1000
+        this.next();
+        type = TT.BIN;
+      }
+    }
+
+    const exp = /[a-f\d\._]/i;
+    while (exp.test(this.c)) {
+      if (this.c === ".") {
+        if (type !== TT.DEC) throw `Syntax Error: Unexpected hex`;
+        if (isFloat) break;
+        type = TT.FLOAT;
+        isFloat = true;
+      }
+      val += this.c;
+      this.next();
+    }
+
+    if (type === TT.DEC && val[val.length - 1] === "d") {
+      // 0200d
+      type = TT.DEC;
+      val = val.substring(0, val.length - 1);
+    } else if (type === TT.DEC && val[val.length - 1] === "b") {
+      // 11001000b, 1100_1000b
+      type = TT.BIN;
+      val = val.substring(0, val.length - 1);
+    } else if (type !== TT.HEX && this.c === "h") {
+      // 0c8h
+      this.next();
+      type = TT.HEX;
+    } else if (this.c === "q" || this.c === "o") {
+      // 310q, 310o
+      this.next();
+      type = TT.OCT;
+    } else if (this.c === "y") {
+      // 1100_1000y
+      this.next();
+      type = TT.BIN;
+    }
+
+    return new Token(type, posStart, val);
   }
 }
