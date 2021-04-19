@@ -1,3 +1,5 @@
+import { Position } from "./Position";
+
 export enum TT {
   DEC = "DEC", // 十进制
   HEX = "HEX", // 十六进制
@@ -36,10 +38,23 @@ export enum TT {
   EOF = "EOF",
 }
 
-export const KEYWORD = ["true", "false", "null"];
+export const KEYWORD = ["true", "false", "null", "auto"];
 
 export class Token {
-  constructor(public type: TT, public pos: number, public value: string) {}
+  constructor(
+    public type: TT,
+    public value: string,
+    public posStart: Position,
+    public posEnd?: Position
+  ) {
+    this.posStart = posStart.copy();
+    if (posEnd) {
+      this.posEnd = posEnd.copy();
+    } else {
+      this.posEnd = posStart.copy();
+      this.posEnd!.next("");
+    }
+  }
 
   toString() {
     return `${this.type}:${this.value}`;

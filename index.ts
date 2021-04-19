@@ -15,4 +15,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run("(1+2)*3");
+// run("a=1");

@@ -1,3 +1,4 @@
+import { Context } from "./Context";
 import {
   BaseNode,
   BinaryNode,
@@ -9,11 +10,17 @@ import {
   NT,
   OctNode,
   UnaryNode,
+  VarAccessNode,
+  VarAssignNode,
+  VarDefineNode,
 } from "./Parser";
 import { TT } from "./Token";
+import { ReferenceError, SyntaxError } from "./BaseError";
 
 export abstract class BaseValue {
   abstract toString(): string;
+
+  abstract typeof(): string;
 
   abstract not(): BoolValue;
   abstract bnot(): NumberValue;
@@ -44,6 +51,9 @@ export abstract class BaseValue {
 }
 
 export class NumberValue extends BaseValue {
+  typeof(): string {
+    return "number";
+  }
   pow(other: BaseValue): NumberValue {
     if (other instanceof NumberValue) {
       return new NumberValue(this.value ** other.value);
@@ -172,11 +182,22 @@ export class NumberValue extends BaseValue {
   }
 }
 
-export class IntValue extends NumberValue {}
+export class IntValue extends NumberValue {
+  typeof(): string {
+    return "int";
+  }
+}
 
-export class FloatValue extends NumberValue {}
+export class FloatValue extends NumberValue {
+  typeof(): string {
+    return "float";
+  }
+}
 
 export class BoolValue extends BaseValue {
+  typeof(): string {
+    return "bool";
+  }
   pow(other: BaseValue): NumberValue {
     throw new Error("Method not implemented.");
   }
@@ -257,6 +278,10 @@ export class BoolValue extends BaseValue {
 }
 
 export class NullValue extends BaseValue {
+  typeof(): string {
+    return "null";
+  }
+
   toString(): string {
     return "null";
   }
@@ -337,7 +362,7 @@ export class NullValue extends BaseValue {
 export class Interpreter {
   constructor() {}
 
-  visit(node: BaseNode): BaseValue {
+  visit(node: BaseNode, context: Context): BaseValue {
     switch (node.id()) {
       case NT.DEC:
         return new IntValue(parseInt((node as DecNode).token.value, 10));
@@ -355,8 +380,8 @@ export class Interpreter {
         return new NullValue();
       case NT.BINARY: {
         const _node = node as BinaryNode;
-        const left = this.visit(_node.left);
-        const right = this.visit(_node.right);
+        const left = this.visit(_node.left, context);
+        const right = this.visit(_node.right, context);
         switch (_node.token.type) {
           case TT.PLUS:
             return left.add(right);
@@ -404,19 +429,65 @@ export class Interpreter {
         const _node = node as UnaryNode;
         switch (_node.token.type) {
           case TT.MINUS:
-            return this.visit(_node.node).mul(new NumberValue(-1));
+            return this.visit(_node.node, context).mul(new NumberValue(-1));
           case TT.PLUS:
-            return this.visit(_node.node);
+            return this.visit(_node.node, context);
           case TT.NOT:
-            return this.visit(_node.node).not();
+            return this.visit(_node.node, context).not();
           case TT.BNOT:
-            return this.visit(_node.node).bnot();
+            return this.visit(_node.node, context).bnot();
           default:
             throw `Runtime Error: Unexpected token '${_node.token.type}'`;
         }
       }
       case NT.BOOL:
         return new BoolValue((node as BoolNode).token.value === "true");
+      case NT.VarDefine: {
+        // 定义变量
+        const _node = node as VarDefineNode;
+        const name = _node.name.value;
+        if (context.variables.hasOwnProperty(name)) {
+          throw new SyntaxError(
+            `Identifier '${name}' has already been declared`,
+            _node.posStart,
+            node.posEnd
+          ).toString();
+        } else {
+          const value: BaseValue = this.visit(_node.value, context);
+          context.variables[name] = value;
+          return value;
+        }
+      }
+      case NT.VarAssign: {
+        // 赋值变量
+        const _node = node as VarAssignNode;
+        const name = _node.name.value;
+        if (context.variables.hasOwnProperty(name)) {
+          const value: BaseValue = this.visit(_node.value, context);
+          context.variables[name] = value;
+          return value;
+        } else {
+          throw new ReferenceError(
+            `${name} is not defined`,
+            _node.posStart,
+            node.posEnd
+          ).toString();
+        }
+      }
+      case NT.VarAccess: {
+        // 使用变量
+        const _node = node as VarAccessNode;
+        const name = _node.name.value;
+        if (context.variables.hasOwnProperty(name)) {
+          return context.variables[_node.name.value];
+        } else {
+          throw new ReferenceError(
+            `${name} is not defined`,
+            _node.posStart,
+            node.posEnd
+          ).toString();
+        }
+      }
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }

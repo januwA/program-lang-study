@@ -31,3 +31,9 @@ true, false
 ```
 null
 ```
+
+# Variable
+```
+auto a = 1
+a = 2
+```

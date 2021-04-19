@@ -1,7 +1,8 @@
+import { SyntaxError } from "./BaseError";
+import { Position } from "./Position";
 import { Token, TT } from "./Token";
 
 // node type
-
 export enum NT {
   DEC,
   HEX,
@@ -12,9 +13,13 @@ export enum NT {
   UNARY,
   BOOL,
   NULL,
+  VarAssign,
+  VarAccess,
+  VarDefine,
 }
 
 export abstract class BaseNode {
+  constructor(public posStart: Position, public posEnd: Position) {}
   abstract toString(): string;
   abstract id(): NT;
 }
@@ -27,7 +32,7 @@ export class DecNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 export class HexNode extends BaseNode {
@@ -38,7 +43,7 @@ export class HexNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 
@@ -50,7 +55,7 @@ export class OctNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 
@@ -62,7 +67,7 @@ export class BinNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 
@@ -74,7 +79,7 @@ export class FloatNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 
@@ -92,7 +97,7 @@ export class BinaryNode extends BaseNode {
     public token: Token,
     public right: BaseNode
   ) {
-    super();
+    super(left.posStart, right.posEnd);
   }
 }
 
@@ -104,7 +109,7 @@ export class UnaryNode extends BaseNode {
     return `${this.token.value}${this.node.toString()}`;
   }
   constructor(public token: Token, public node: BaseNode) {
-    super();
+    super(token.posStart, node.posEnd);
   }
 }
 
@@ -116,7 +121,7 @@ export class BoolNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
   }
 }
 
@@ -128,7 +133,68 @@ export class NullNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super();
+    super(token.posStart, token.posEnd);
+  }
+}
+
+/**
+ * 变量定义
+ *
+ * auto a = 1
+ * int a = 1
+ * float a = 1.2
+ */
+export class VarDefineNode extends BaseNode {
+  id(): NT {
+    return NT.VarDefine;
+  }
+  toString(): string {
+    return `${this.type.value} ${this.name.value} = ${this.value.toString()}`;
+  }
+  constructor(
+    public type: Token,
+    public name: Token,
+    public eq: Token,
+    public value: BaseNode
+  ) {
+    super(type.posStart, value.posEnd);
+  }
+}
+
+/**
+ * 变量赋值
+ *
+ * a = 1
+ * a += 1
+ *
+ * ident EQ expr
+ */
+export class VarAssignNode extends BaseNode {
+  id(): NT {
+    return NT.VarAssign;
+  }
+  toString(): string {
+    return `${this.name.value} = ${this.value.toString()}`;
+  }
+  constructor(public name: Token, public eq: Token, public value: BaseNode) {
+    super(name.posStart, value.posEnd);
+  }
+}
+
+/**
+ * 使用变量
+ *
+ * a + 1
+ */
+export class VarAccessNode extends BaseNode {
+  id(): NT {
+    return NT.VarAccess;
+  }
+  toString(): string {
+    return `${this.name.value}`;
+  }
+  constructor(public name: Token) {
+    super(name.posStart, name.posEnd);
   }
 }
 
@@ -225,24 +291,74 @@ export class Parser {
     return 0;
   }
 
+  private peek(index: number) {
+    return this.tokens[this.pos + index];
+  }
+
   parse(): BaseNode {
-    const result = this.expr();
+    if (this.token.is(TT.EOF)) {
+      return new NullNode(this.token);
+    }
+
+    const result: BaseNode = this.expr();
 
     if (this.token.type !== TT.EOF) {
-      throw `Syntax Error: EOF`;
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
     }
 
     return result;
   }
 
-  private expr(parentPrecedence = 0) {
+  private expr(): BaseNode {
+    return this.assignmentExpr();
+  }
+
+  private assignmentExpr(): BaseNode {
+    const token = this.token;
+
+    if (token.isKeyword("auto")) {
+      const type = this.token;
+      // auto a = 1
+      this.next();
+      if (this.token.is(TT.IDENTIFIER)) {
+        const name = this.token;
+        this.next();
+        if (this.token.is(TT.EQ)) {
+          const eq = this.token;
+          this.next();
+          const value = this.expr();
+          return new VarDefineNode(type, name, eq, value);
+        } else {
+          throw new SyntaxError(
+            `Unexpected token '${this.token.value}'`,
+            this.token.posStart,
+            this.token.posEnd
+          ).toString();
+        }
+      } else {
+        throw new SyntaxError(
+          `Unexpected token '${this.token.value}'`,
+          this.token.posStart,
+          this.token.posEnd
+        ).toString();
+      }
+    } else {
+      return this.binaryExpr();
+    }
+  }
+
+  private binaryExpr(parentPrecedence = 0): BaseNode {
     let left: BaseNode;
 
     const unaryPrecedence = this.getUnaryOperatorPrecedence(this.token);
     if (unaryPrecedence !== 0 && unaryPrecedence >= parentPrecedence) {
       const token = this.token;
       this.next();
-      const _node: BaseNode = this.expr(unaryPrecedence);
+      const _node: BaseNode = this.binaryExpr(unaryPrecedence);
       // if(_node instanceof UnaryNode) {
       //   // --1
       //   // ++1
@@ -259,7 +375,7 @@ export class Parser {
 
       const t = this.token;
       this.next();
-      const right = this.expr(precedence);
+      const right = this.binaryExpr(precedence);
       left = new BinaryNode(left, t, right);
     }
     return left;
@@ -282,6 +398,16 @@ export class Parser {
     } else if (token.is(TT.FLOAT)) {
       this.next();
       return new FloatNode(token);
+    } else if (token.is(TT.IDENTIFIER)) {
+      this.next();
+      if (this.token.is(TT.EQ)) {
+        const eq = this.token;
+        this.next();
+        const value = this.expr();
+        return new VarAssignNode(token, eq, value);
+      } else {
+        return new VarAccessNode(token);
+      }
     } else if (token.is(TT.LPAREN)) {
       this.next();
       const _expr = this.expr();
@@ -297,7 +423,11 @@ export class Parser {
       this.next();
       return new BoolNode(token);
     } else {
-      throw `Syntax Error: TOKEN ${token}`;
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
     }
   }
 }

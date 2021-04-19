@@ -1,7 +1,10 @@
-import { Interpreter } from "./Interpreter";
+import { Context } from "./Context";
+import { BaseValue, Interpreter } from "./Interpreter";
 import { Lexer } from "./Lexer";
 import { BaseNode, Parser } from "./Parser";
 import { Token, TT } from "./Token";
+
+const context: Context = new Context();
 
 export function run(text: string) {
   try {
@@ -12,11 +15,11 @@ export function run(text: string) {
     // console.log(tokens.map((it) => it.toString()));
 
     const parser = new Parser(tokens);
-    const expr: BaseNode = parser.parse();
-    console.log(expr.toString());
+    const ast: BaseNode = parser.parse();
+    // console.log(ast.toString());
 
     const interpreter = new Interpreter();
-    const result = interpreter.visit(expr);
+    const result: BaseValue = interpreter.visit(ast, context);
     console.log(result.toString());
   } catch (error) {
     console.log(error);
