@@ -407,6 +407,10 @@ export class Parser {
       return 6;
     }
 
+    if (token.is(TT.NULLISH)) {
+      return 5;
+    }
+
     if (
       token.is(TT.EQ) ||
       token.is(TT.PLUS_EQ) ||
@@ -421,7 +425,8 @@ export class Parser {
       token.is(TT.BOR_EQ) ||
       token.is(TT.XOR_EQ) ||
       token.is(TT.AND_EQ) ||
-      token.is(TT.OR_EQ)
+      token.is(TT.OR_EQ) ||
+      token.is(TT.NULLISH_EQ)
     ) {
       return 3;
     }
@@ -502,7 +507,8 @@ export class Parser {
         nextToken.is(TT.XOR_EQ) ||
         nextToken.is(TT.BOR_EQ) ||
         nextToken.is(TT.AND_EQ) ||
-        nextToken.is(TT.OR_EQ)
+        nextToken.is(TT.OR_EQ) ||
+        nextToken.is(TT.NULLISH_EQ)
       ) {
         this.next();
         const operator = this.token;

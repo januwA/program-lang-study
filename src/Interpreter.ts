@@ -45,6 +45,8 @@ export abstract class BaseValue {
   abstract and(other: BaseValue): BaseValue;
   abstract or(other: BaseValue): BaseValue;
 
+  abstract nullishCoalescing(other: BaseValue): BaseValue;
+
   // cmp
   abstract lt(other: BaseValue): BoolValue;
   abstract gt(other: BaseValue): BoolValue;
@@ -55,6 +57,9 @@ export abstract class BaseValue {
 }
 
 export class NumberValue extends BaseValue {
+  nullishCoalescing(other: BaseValue): BaseValue {
+    return this;
+  }
   typeof(): string {
     return "number";
   }
@@ -199,6 +204,9 @@ export class FloatValue extends NumberValue {
 }
 
 export class BoolValue extends BaseValue {
+  nullishCoalescing(other: BaseValue): BaseValue {
+    return this;
+  }
   typeof(): string {
     return "bool";
   }
@@ -282,6 +290,10 @@ export class BoolValue extends BaseValue {
 }
 
 export class NullValue extends BaseValue {
+  nullishCoalescing(other: BaseValue): BaseValue {
+    return other;
+  }
+
   typeof(): string {
     return "null";
   }
@@ -511,6 +523,8 @@ export class Interpreter {
         value = context.getVariable(name).and(value);
       } else if (node.operator.is(TT.OR_EQ)) {
         value = context.getVariable(name).or(value);
+      } else if (node.operator.is(TT.NULLISH_EQ)) {
+        value = context.getVariable(name).nullishCoalescing(value);
       }
 
       context.setVariable(name, value);
@@ -602,6 +616,8 @@ export class Interpreter {
         return left.ee(right);
       case TT.NE:
         return left.ne(right);
+      case TT.NULLISH:
+        return left.nullishCoalescing(right);
       default:
         break;
     }

@@ -14,6 +14,7 @@ export enum TT {
   LSQUARE = "LSQUARE", // [
   RSQUARE = "RSQUARE", // ]
   SEMICOLON = "SEMICOLON", // ;
+  QMAKE = "QMAKE", // ?
 
   // 运算
   PLUS = "PLUS", // +
@@ -28,6 +29,7 @@ export enum TT {
   REMAINDER = "REMAINDER", // %
   SHL = "SHL", // <<
   SHR = "SHR", // >>
+  NULLISH = "NULLISH", // ??
 
   // 逻辑
   NOT = "NOT", // !
@@ -55,6 +57,7 @@ export enum TT {
   XOR_EQ = "XOR_EQ", // ^=
   AND_EQ = "AND_EQ", // &&=
   OR_EQ = "OR_EQ", // ||=
+  NULLISH_EQ = "NULLISH_EQ", // ??=
 
   KEYWORD = "KEYWORD",
   IDENTIFIER = "IDENTIFIER",

@@ -55,6 +55,18 @@ export class Lexer {
         this.next();
         return new Token(TT.SEMICOLON, ";", posStart);
       }
+      case "?": {
+        this.next();
+        if ((this.c as string) === "?") {
+          this.next();
+          if ((this.c as string) === "=") {
+            return new Token(TT.NULLISH_EQ, "??=", posStart, this.pos);
+          }
+          return new Token(TT.NULLISH, "??", posStart, this.pos);
+        } else {
+          return new Token(TT.QMAKE, "?", posStart);
+        }
+      }
       case "%": {
         this.next();
         if ((this.c as string) === "=") {
