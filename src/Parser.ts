@@ -3,6 +3,7 @@ import { Position } from "./Position";
 import { Token, TT } from "./Token";
 
 // node type
+
 export enum NT {
   DEC,
   HEX,
@@ -15,7 +16,8 @@ export enum NT {
   NULL,
   VarAssign,
   VarAccess,
-  VarDefine,
+  VarDeclare,
+  BLOCK,
 }
 
 export abstract class BaseNode {
@@ -138,15 +140,15 @@ export class NullNode extends BaseNode {
 }
 
 /**
- * 变量定义
+ * 申明变量
  *
  * auto a = 1
  * int a = 1
  * float a = 1.2
  */
-export class VarDefineNode extends BaseNode {
+export class VarDeclareNode extends BaseNode {
   id(): NT {
-    return NT.VarDefine;
+    return NT.VarDeclare;
   }
   toString(): string {
     return `${this.type.value} ${this.name.value} = ${this.value.toString()}`;
@@ -198,6 +200,26 @@ export class VarAccessNode extends BaseNode {
   }
 }
 
+export class BlockNode extends BaseNode {
+  id(): NT {
+    return NT.BLOCK;
+  }
+  toString(): string {
+    return `{ ${this.statements
+      .map((it) => it.toString())
+      .reduce((acc, it) => {
+        return acc + it;
+      }, "")} }`;
+  }
+  constructor(
+    public start: Token,
+    public statements: BaseNode[],
+    public end: Token
+  ) {
+    super(start.posStart, end.posEnd);
+  }
+}
+
 /**
  * 将token表解析为AST语法树
  */
@@ -214,6 +236,10 @@ export class Parser {
     } else {
       // this.token = this.token;
     }
+  }
+
+  peek(offset: number): Token {
+    return this.tokens[this.pos + offset - 1];
   }
 
   /**
@@ -291,16 +317,12 @@ export class Parser {
     return 0;
   }
 
-  private peek(index: number) {
-    return this.tokens[this.pos + index];
-  }
-
   parse(): BaseNode {
     if (this.token.is(TT.EOF)) {
       return new NullNode(this.token);
     }
 
-    const result: BaseNode = this.expr();
+    const result: BaseNode = this.statement();
 
     if (this.token.type !== TT.EOF) {
       throw new SyntaxError(
@@ -314,37 +336,80 @@ export class Parser {
   }
 
   private expr(): BaseNode {
-    return this.assignmentExpr();
+    return this.variableAssign();
   }
 
-  private assignmentExpr(): BaseNode {
+  private statement() {
     const token = this.token;
+    if (token.is(TT.LBLOCK)) {
+      return this.blockStatement();
+    } else if (token.isKeyword("auto")) {
+      return this.variableDeclare();
+    } else {
+      return this.expr();
+    }
+  }
 
-    if (token.isKeyword("auto")) {
-      const type = this.token;
-      // auto a = 1
+  private blockStatement(): BaseNode {
+    const start = this.token;
+    if (start.is(TT.LBLOCK)) {
       this.next();
-      if (this.token.is(TT.IDENTIFIER)) {
-        const name = this.token;
+
+      const statements = [];
+
+      while (!this.token.is(TT.RBLOCK)) {
+        statements.push(this.statement());
+      }
+
+      const end = this.token;
+      if (end.is(TT.RBLOCK)) {
         this.next();
-        if (this.token.is(TT.EQ)) {
-          const eq = this.token;
-          this.next();
-          const value = this.expr();
-          return new VarDefineNode(type, name, eq, value);
-        } else {
-          throw new SyntaxError(
-            `Unexpected token '${this.token.value}'`,
-            this.token.posStart,
-            this.token.posEnd
-          ).toString();
-        }
+        return new BlockNode(start, statements, end);
+      }
+    }
+  }
+
+  private variableDeclare(): BaseNode {
+    // auto a = 1
+    const type = this.token;
+    this.next();
+    if (this.token.is(TT.IDENTIFIER)) {
+      const name = this.token;
+      this.next();
+      if (this.token.is(TT.EQ)) {
+        const eq = this.token;
+        this.next();
+        const value = this.expr();
+        return new VarDeclareNode(type, name, eq, value);
       } else {
         throw new SyntaxError(
           `Unexpected token '${this.token.value}'`,
           this.token.posStart,
           this.token.posEnd
         ).toString();
+      }
+    } else {
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
+    }
+  }
+
+  private variableAssign(): BaseNode {
+    // a = 1
+    const name = this.token;
+    if (name.is(TT.IDENTIFIER)) {
+      const nextToken = this.peek(1);
+      if (nextToken.is(TT.EQ)) {
+        this.next();
+        const eq = this.token;
+        this.next();
+        const value = this.expr();
+        return new VarAssignNode(name, eq, value);
+      } else {
+        return this.binaryExpr();
       }
     } else {
       return this.binaryExpr();
@@ -359,11 +424,6 @@ export class Parser {
       const token = this.token;
       this.next();
       const _node: BaseNode = this.binaryExpr(unaryPrecedence);
-      // if(_node instanceof UnaryNode) {
-      //   // --1
-      //   // ++1
-      //   throw `Syntax Error: Invalid left-hand side expression in prefix operation`;
-      // }
       left = new UnaryNode(token, _node);
     } else {
       left = this.primary();
@@ -400,14 +460,7 @@ export class Parser {
       return new FloatNode(token);
     } else if (token.is(TT.IDENTIFIER)) {
       this.next();
-      if (this.token.is(TT.EQ)) {
-        const eq = this.token;
-        this.next();
-        const value = this.expr();
-        return new VarAssignNode(token, eq, value);
-      } else {
-        return new VarAccessNode(token);
-      }
+      return new VarAccessNode(token);
     } else if (token.is(TT.LPAREN)) {
       this.next();
       const _expr = this.expr();
@@ -424,9 +477,9 @@ export class Parser {
       return new BoolNode(token);
     } else {
       throw new SyntaxError(
-        `Unexpected token '${this.token.value}'`,
-        this.token.posStart,
-        this.token.posEnd
+        `Unexpected token '${token.value}'`,
+        token.posStart,
+        token.posEnd
       ).toString();
     }
   }

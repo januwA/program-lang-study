@@ -8,7 +8,11 @@ const rl = readline.createInterface({
 
 const waitForUserInput = function () {
   rl.question("> ", (text) => {
-    run(text);
+    try {
+      run(text);
+    } catch (error) {
+      console.log(error);
+    }
     waitForUserInput();
   });
 };

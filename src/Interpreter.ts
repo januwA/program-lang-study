@@ -3,6 +3,7 @@ import {
   BaseNode,
   BinaryNode,
   BinNode,
+  BlockNode,
   BoolNode,
   DecNode,
   FloatNode,
@@ -12,7 +13,7 @@ import {
   UnaryNode,
   VarAccessNode,
   VarAssignNode,
-  VarDefineNode,
+  VarDeclareNode,
 } from "./Parser";
 import { TT } from "./Token";
 import { ReferenceError, SyntaxError } from "./BaseError";
@@ -365,131 +366,189 @@ export class Interpreter {
   visit(node: BaseNode, context: Context): BaseValue {
     switch (node.id()) {
       case NT.DEC:
-        return new IntValue(parseInt((node as DecNode).token.value, 10));
+        return this.visitDec(node as DecNode);
       case NT.HEX:
-        return new IntValue(parseInt((node as HexNode).token.value, 16));
+        return this.visitHex(node as HexNode);
       case NT.OCT:
-        return new IntValue(parseInt((node as OctNode).token.value, 8));
+        return this.visitOct(node as OctNode);
       case NT.BIN:
-        return new IntValue(
-          parseInt((node as BinNode).token.value.replace(/_/g, ""), 2)
-        );
+        return this.visitBin(node as BinNode);
       case NT.FLOAT:
-        return new FloatValue(parseFloat((node as FloatNode).token.value));
+        return this.visitFloat(node as FloatNode);
+
       case NT.NULL:
-        return new NullValue();
-      case NT.BINARY: {
-        const _node = node as BinaryNode;
-        const left = this.visit(_node.left, context);
-        const right = this.visit(_node.right, context);
-        switch (_node.token.type) {
-          case TT.PLUS:
-            return left.add(right);
-          case TT.MINUS:
-            return left.sub(right);
-          case TT.MUL:
-            return left.mul(right);
-          case TT.DIV:
-            return left.div(right);
-          case TT.AND:
-            return left.and(right);
-          case TT.OR:
-            return left.or(right);
-          case TT.BAND:
-            return left.band(right);
-          case TT.BOR:
-            return left.bor(right);
-          case TT.POW:
-            return left.pow(right);
-          case TT.REMAINDER:
-            return left.remainder(right);
-          case TT.XOR:
-            return left.xor(right);
-          case TT.SHL:
-            return left.shl(right);
-          case TT.SHR:
-            return left.shr(right);
-          case TT.LT:
-            return left.lt(right);
-          case TT.GT:
-            return left.gt(right);
-          case TT.LTE:
-            return left.lte(right);
-          case TT.GTE:
-            return left.gte(right);
-          case TT.EE:
-            return left.ee(right);
-          case TT.NE:
-            return left.ne(right);
-          default:
-            break;
-        }
-      }
-      case NT.UNARY: {
-        const _node = node as UnaryNode;
-        switch (_node.token.type) {
-          case TT.MINUS:
-            return this.visit(_node.node, context).mul(new NumberValue(-1));
-          case TT.PLUS:
-            return this.visit(_node.node, context);
-          case TT.NOT:
-            return this.visit(_node.node, context).not();
-          case TT.BNOT:
-            return this.visit(_node.node, context).bnot();
-          default:
-            throw `Runtime Error: Unexpected token '${_node.token.type}'`;
-        }
-      }
+        return this.visitNull();
+
       case NT.BOOL:
-        return new BoolValue((node as BoolNode).token.value === "true");
-      case NT.VarDefine: {
-        // 定义变量
-        const _node = node as VarDefineNode;
-        const name = _node.name.value;
-        if (context.variables.hasOwnProperty(name)) {
-          throw new SyntaxError(
-            `Identifier '${name}' has already been declared`,
-            _node.posStart,
-            node.posEnd
-          ).toString();
-        } else {
-          const value: BaseValue = this.visit(_node.value, context);
-          context.variables[name] = value;
-          return value;
-        }
-      }
-      case NT.VarAssign: {
-        // 赋值变量
-        const _node = node as VarAssignNode;
-        const name = _node.name.value;
-        if (context.variables.hasOwnProperty(name)) {
-          const value: BaseValue = this.visit(_node.value, context);
-          context.variables[name] = value;
-          return value;
-        } else {
-          throw new ReferenceError(
-            `${name} is not defined`,
-            _node.posStart,
-            node.posEnd
-          ).toString();
-        }
-      }
-      case NT.VarAccess: {
-        // 使用变量
-        const _node = node as VarAccessNode;
-        const name = _node.name.value;
-        if (context.variables.hasOwnProperty(name)) {
-          return context.variables[_node.name.value];
-        } else {
-          throw new ReferenceError(
-            `${name} is not defined`,
-            _node.posStart,
-            node.posEnd
-          ).toString();
-        }
-      }
+        return this.visitBool(node as BoolNode);
+
+      case NT.BINARY:
+        return this.visitBinary(node as BinaryNode, context);
+      case NT.UNARY:
+        return this.visitUnary(node as UnaryNode, context);
+      case NT.VarDeclare:
+        return this.visitVarDeclare(node as VarDeclareNode, context);
+      case NT.VarAssign:
+        return this.visitVarAssign(node as VarAssignNode, context);
+      case NT.VarAccess:
+        return this.visitVarAccess(node as VarAccessNode, context);
+      case NT.BLOCK:
+        return this.visitBlock(node as BlockNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+
+  visitBlock(node: BlockNode, context: Context): BaseValue {
+    let result: BaseValue = new NullValue();
+    const newContext = new Context(context);
+    for (const statement of node.statements) {
+      result = this.visit(statement, newContext);
+    }
+    return result;
+  }
+
+  // 使用变量
+  private visitVarAccess(node: VarAccessNode, context: Context): BaseValue {
+    const name = node.name.value;
+    if (context.hasVariable(name)) {
+      return context.getVariable(node.name.value);
+    } else {
+      throw new ReferenceError(
+        `${name} is not defined`,
+        node.posStart,
+        node.posEnd
+      ).toString();
+    }
+  }
+
+  // 赋值变量
+  private visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
+    const name = node.name.value;
+    if (context.hasVariable(name)) {
+      const value: BaseValue = this.visit(node.value, context);
+      if (context.setVariable(name, value)) {
+        return value;
+      } else {
+        throw new ReferenceError(
+          `${name} is not defined`,
+          node.posStart,
+          node.posEnd
+        ).toString();
+      }
+    } else {
+      throw new ReferenceError(
+        `${name} is not defined`,
+        node.posStart,
+        node.posEnd
+      ).toString();
+    }
+  }
+
+  // 定义变量
+  private visitVarDeclare(node: VarDeclareNode, context: Context): BaseValue {
+    const name = node.name.value;
+    if (context.canDeclareVariable(name)) {
+      const value: BaseValue = this.visit(node.value, context);
+      context.declareVariable(name, value);
+      return value;
+    } else {
+      // 当前作用域内，不能再次定义
+      throw new SyntaxError(
+        `Identifier '${name}' has already been declared`,
+        node.posStart,
+        node.posEnd
+      ).toString();
+    }
+  }
+
+  private visitBool(node: BoolNode): BaseValue {
+    return new BoolValue(node.token.value === "true");
+  }
+
+  private visitUnary(node: UnaryNode, context: Context) {
+    switch (node.token.type) {
+      case TT.MINUS:
+        return this.visit(node.node, context).mul(new NumberValue(-1));
+      case TT.PLUS:
+        return this.visit(node.node, context);
+      case TT.NOT:
+        return this.visit(node.node, context).not();
+      case TT.BNOT:
+        return this.visit(node.node, context).bnot();
+      default:
+        throw `Runtime Error: Unexpected token '${node.token.type}'`;
+    }
+  }
+
+  private visitBinary(node: BinaryNode, context: Context) {
+    const left = this.visit(node.left, context);
+    const right = this.visit(node.right, context);
+    switch (node.token.type) {
+      case TT.PLUS:
+        return left.add(right);
+      case TT.MINUS:
+        return left.sub(right);
+      case TT.MUL:
+        return left.mul(right);
+      case TT.DIV:
+        return left.div(right);
+      case TT.AND:
+        return left.and(right);
+      case TT.OR:
+        return left.or(right);
+      case TT.BAND:
+        return left.band(right);
+      case TT.BOR:
+        return left.bor(right);
+      case TT.POW:
+        return left.pow(right);
+      case TT.REMAINDER:
+        return left.remainder(right);
+      case TT.XOR:
+        return left.xor(right);
+      case TT.SHL:
+        return left.shl(right);
+      case TT.SHR:
+        return left.shr(right);
+      case TT.LT:
+        return left.lt(right);
+      case TT.GT:
+        return left.gt(right);
+      case TT.LTE:
+        return left.lte(right);
+      case TT.GTE:
+        return left.gte(right);
+      case TT.EE:
+        return left.ee(right);
+      case TT.NE:
+        return left.ne(right);
+      default:
+        break;
+    }
+  }
+
+  private visitNull(): BaseValue {
+    return new NullValue();
+  }
+
+  private visitFloat(node: FloatNode): BaseValue {
+    return new FloatValue(parseFloat(node.token.value));
+  }
+
+  private visitBin(node: BinNode): BaseValue {
+    return new IntValue(parseInt(node.token.value.replace(/_/g, ""), 2));
+  }
+
+  private visitOct(node: OctNode): BaseValue {
+    return new IntValue(parseInt(node.token.value, 8));
+  }
+
+  private visitHex(node: HexNode): BaseValue {
+    return new IntValue(parseInt(node.token.value, 16));
+  }
+
+  private visitDec(node: DecNode): BaseValue {
+    return new IntValue(parseInt(node.token.value, 10));
   }
 }

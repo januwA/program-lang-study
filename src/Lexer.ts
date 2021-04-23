@@ -46,15 +46,11 @@ export class Lexer {
     }
 
     switch (this.c) {
-      case " ": {
-        const posStart = this.pos;
-        let val: string = "";
-        while (this.c === " ") {
-          val += this.c;
-          this.next();
-        }
-        return new Token(TT.SPACE, val, posStart, this.pos);
-      }
+      case " ":
+      case "\t":
+      case "\r":
+      case "\n":
+        return this.makeSpace();
       case "%": {
         this.next();
         return new Token(TT.REMAINDER, "%", posStart);
@@ -91,6 +87,13 @@ export class Lexer {
       case ")":
         this.next();
         return new Token(TT.RPAREN, ")", posStart);
+      case "{": {
+        this.next();
+        return new Token(TT.LBLOCK, "{", posStart);
+      }
+      case "}":
+        this.next();
+        return new Token(TT.RBLOCK, "}", posStart);
       case "[":
         this.next();
         return new Token(TT.LSQUARE, "[", posStart);
@@ -160,7 +163,6 @@ export class Lexer {
         }
       }
       default:
-        const c = this.c;
         this.next();
         throw new SyntaxError(
           "Invalid or unexpected token",
@@ -239,5 +241,20 @@ export class Lexer {
     }
 
     return new Token(type, val, posStart, this.pos);
+  }
+
+  private makeSpace(): Token {
+    const posStart = this.pos.copy();
+    let val: string = "";
+    while (
+      this.c === " " ||
+      this.c === "\t" ||
+      this.c === "\r" ||
+      this.c === "\n"
+    ) {
+      val += this.c;
+      this.next();
+    }
+    return new Token(TT.SPACE, val, posStart, this.pos);
   }
 }

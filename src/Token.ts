@@ -13,6 +13,8 @@ export enum TT {
   DIV = "DIV", // /
   LPAREN = "LPAREN", // (
   RPAREN = "RPAREN", // )
+  LBLOCK = "LBLOCK", // {
+  RBLOCK = "RBLOCK", // }
   LSQUARE = "LSQUARE", // [
   RSQUARE = "RSQUARE", // ]
   NOT = "NOT", // !
