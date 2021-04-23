@@ -7,40 +7,70 @@ export enum TT {
   BIN = "BIN", // 二进制
   FLOAT = "FLOAT", // 浮点数
   SPACE = "SPACE", // " "
-  PLUS = "PLUS", // +
-  MINUS = "MINUS", // -
-  MUL = "MUL", // *
-  DIV = "DIV", // /
   LPAREN = "LPAREN", // (
   RPAREN = "RPAREN", // )
   LBLOCK = "LBLOCK", // {
   RBLOCK = "RBLOCK", // }
   LSQUARE = "LSQUARE", // [
   RSQUARE = "RSQUARE", // ]
-  NOT = "NOT", // !
-  AND = "AND", // &&
-  OR = "OR", // ||
+  SEMICOLON = "SEMICOLON", // ;
+
+  // 运算
+  PLUS = "PLUS", // +
+  MINUS = "MINUS", // -
+  MUL = "MUL", // *
+  DIV = "DIV", // /
   BAND = "BAND", // &
   BOR = "BOR", // |
   XOR = "XOR", // ^
-  LT = "LT", // <
-  GT = "GT", // >
-  EQ = "EQ", // =
-  LTE = "LTE", // <=
-  GTE = "GTE", // >=
-  EE = "EE", // ==
-  NE = "NE", // !=
   POW = "POW", // **
   BNOT = "BNOT", // ~
   REMAINDER = "REMAINDER", // %
   SHL = "SHL", // <<
   SHR = "SHR", // >>
+
+  // 逻辑
+  NOT = "NOT", // !
+  LT = "LT", // <
+  GT = "GT", // >
+  LTE = "LTE", // <=
+  GTE = "GTE", // >=
+  EE = "EE", // ==
+  NE = "NE", // !=
+  AND = "AND", // &&
+  OR = "OR", // ||
+
+  // 赋值
+  EQ = "EQ", // =
+  PLUS_EQ = "PLUS_EQ", // +=
+  MINUS_EQ = "MINUS_EQ", // -=
+  MUL_EQ = "MUL_EQ", // *=
+  DIV_EQ = "DIV_EQ", // /=
+  POW_EQ = "POW_EQ", // **=
+  REMAINDER_EQ = "REMAINDER_EQ", // %=
+  SHL_EQ = "SHL_EQ", // <<=
+  SHR_EQ = "SHR_EQ", // >>=
+  BAND_EQ = "BAND_EQ", // &=
+  BOR_EQ = "BOR_EQ", // |=
+  XOR_EQ = "XOR_EQ", // ^=
+  AND_EQ = "AND_EQ", // &&=
+  OR_EQ = "OR_EQ", // ||=
+
   KEYWORD = "KEYWORD",
   IDENTIFIER = "IDENTIFIER",
   EOF = "EOF",
 }
 
-export const KEYWORD = ["true", "false", "null", "auto"];
+export const KEYWORD = [
+  "true",
+  "false",
+  "null",
+  "auto",
+  "if",
+  "else",
+  "while",
+  "for",
+];
 
 export class Token {
   constructor(

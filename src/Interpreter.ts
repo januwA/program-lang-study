@@ -7,13 +7,16 @@ import {
   BoolNode,
   DecNode,
   FloatNode,
+  ForNode,
   HexNode,
+  IfNode,
   NT,
   OctNode,
   UnaryNode,
   VarAccessNode,
   VarAssignNode,
   VarDeclareNode,
+  WhileNode,
 } from "./Parser";
 import { TT } from "./Token";
 import { ReferenceError, SyntaxError } from "./BaseError";
@@ -394,8 +397,62 @@ export class Interpreter {
         return this.visitVarAccess(node as VarAccessNode, context);
       case NT.BLOCK:
         return this.visitBlock(node as BlockNode, context);
+      case NT.IF:
+        return this.visitIf(node as IfNode, context);
+      case NT.WHILE:
+        return this.visitWhile(node as WhileNode, context);
+      case NT.FOR:
+        return this.visitFor(node as ForNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
+    }
+  }
+
+  visitFor(node: ForNode, context: Context): BaseValue {
+    const newContext = new Context(context);
+    let result = new NullValue();
+    this.visit(node.init, newContext);
+    while (true) {
+      const condition: BaseValue = this.visit(node.condition, newContext);
+      if (condition instanceof BoolValue) {
+        if (condition.value === false) break;
+        result = this.visit(node.bodyNode, newContext);
+        this.visit(node.stepNode, newContext);
+      } else {
+        throw `Runtime Error: condition is not a bool value`;
+      }
+    }
+    return result;
+  }
+
+  visitWhile(node: WhileNode, context: Context): BaseValue {
+    let result = new NullValue();
+    while (true) {
+      const condition: BaseValue = this.visit(node.condition, context);
+      if (condition instanceof BoolValue) {
+        if (condition.value === false) break;
+        result = this.visit(node.bodyNode, context);
+      } else {
+        throw `Runtime Error: condition is not a bool value`;
+      }
+    }
+    return result;
+  }
+
+  visitIf(node: IfNode, context: Context): BaseValue {
+    const condition: BaseValue = this.visit(node.condition, context);
+    if (condition instanceof BoolValue) {
+      if (condition.value === true) {
+        return this.visit(node.thenNode, context);
+      } else {
+        if (node.elseNode) {
+          return this.visit(node.elseNode, context);
+        } else {
+          return new NullValue();
+        }
+      }
+    } else {
+      throw `Runtime Error: condition is not a bool value`;
     }
   }
 
@@ -412,7 +469,7 @@ export class Interpreter {
   private visitVarAccess(node: VarAccessNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.hasVariable(name)) {
-      return context.getVariable(node.name.value);
+      return context.getVariable(name);
     } else {
       throw new ReferenceError(
         `${name} is not defined`,
@@ -426,16 +483,38 @@ export class Interpreter {
   private visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.hasVariable(name)) {
-      const value: BaseValue = this.visit(node.value, context);
-      if (context.setVariable(name, value)) {
-        return value;
-      } else {
-        throw new ReferenceError(
-          `${name} is not defined`,
-          node.posStart,
-          node.posEnd
-        ).toString();
+      let value: BaseValue = this.visit(node.value, context);
+
+      if (node.operator.is(TT.PLUS_EQ)) {
+        value = context.getVariable(name).add(value);
+      } else if (node.operator.is(TT.MINUS_EQ)) {
+        value = context.getVariable(name).sub(value);
+      } else if (node.operator.is(TT.MUL_EQ)) {
+        value = context.getVariable(name).mul(value);
+      } else if (node.operator.is(TT.DIV_EQ)) {
+        value = context.getVariable(name).mul(value);
+      } else if (node.operator.is(TT.POW_EQ)) {
+        value = context.getVariable(name).pow(value);
+      } else if (node.operator.is(TT.REMAINDER_EQ)) {
+        value = context.getVariable(name).remainder(value);
+      } else if (node.operator.is(TT.SHL_EQ)) {
+        value = context.getVariable(name).shl(value);
+      } else if (node.operator.is(TT.SHR_EQ)) {
+        value = context.getVariable(name).shr(value);
+      } else if (node.operator.is(TT.BAND_EQ)) {
+        value = context.getVariable(name).band(value);
+      } else if (node.operator.is(TT.XOR_EQ)) {
+        value = context.getVariable(name).xor(value);
+      } else if (node.operator.is(TT.BOR_EQ)) {
+        value = context.getVariable(name).bor(value);
+      } else if (node.operator.is(TT.AND_EQ)) {
+        value = context.getVariable(name).and(value);
+      } else if (node.operator.is(TT.OR_EQ)) {
+        value = context.getVariable(name).or(value);
       }
+
+      context.setVariable(name, value);
+      return value;
     } else {
       throw new ReferenceError(
         `${name} is not defined`,

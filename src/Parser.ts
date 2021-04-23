@@ -1,6 +1,6 @@
 import { SyntaxError } from "./BaseError";
 import { Position } from "./Position";
-import { Token, TT } from "./Token";
+import { KEYWORD, Token, TT } from "./Token";
 
 // node type
 
@@ -18,6 +18,9 @@ export enum NT {
   VarAccess,
   VarDeclare,
   BLOCK,
+  IF,
+  WHILE,
+  FOR,
 }
 
 export abstract class BaseNode {
@@ -151,7 +154,7 @@ export class VarDeclareNode extends BaseNode {
     return NT.VarDeclare;
   }
   toString(): string {
-    return `${this.type.value} ${this.name.value} = ${this.value.toString()}`;
+    return `(${this.type.value} ${this.name.value} = ${this.value.toString()})`;
   }
   constructor(
     public type: Token,
@@ -176,9 +179,13 @@ export class VarAssignNode extends BaseNode {
     return NT.VarAssign;
   }
   toString(): string {
-    return `${this.name.value} = ${this.value.toString()}`;
+    return `${this.name.value} ${this.operator.value} ${this.value.toString()}`;
   }
-  constructor(public name: Token, public eq: Token, public value: BaseNode) {
+  constructor(
+    public name: Token,
+    public operator: Token,
+    public value: BaseNode
+  ) {
     super(name.posStart, value.posEnd);
   }
 }
@@ -220,6 +227,62 @@ export class BlockNode extends BaseNode {
   }
 }
 
+export class IfNode extends BaseNode {
+  id(): NT {
+    return NT.IF;
+  }
+  toString(): string {
+    let str = `if (${this.condition.toString()}) ${this.thenNode.toString()}`;
+
+    if (this.elseNode) {
+      str += " else " + this.elseNode.toString();
+    }
+    return str;
+  }
+  constructor(
+    public ifKeyword: Token,
+    public condition: BaseNode,
+    public thenNode: BaseNode,
+    public elseNode?: BaseNode
+  ) {
+    super(ifKeyword.posStart, elseNode ? elseNode.posEnd : thenNode.posEnd);
+  }
+}
+
+export class WhileNode extends BaseNode {
+  id(): NT {
+    return NT.WHILE;
+  }
+  toString(): string {
+    return `while (${this.condition.toString()}) ${this.bodyNode.toString()}`;
+  }
+  constructor(
+    public whileKeyword: Token,
+    public condition: BaseNode,
+    public bodyNode: BaseNode
+  ) {
+    super(whileKeyword.posStart, bodyNode.posEnd);
+  }
+}
+
+export class ForNode extends BaseNode {
+  id(): NT {
+    return NT.FOR;
+  }
+  toString(): string {
+    return `for (${this.condition.toString()}) ${this.bodyNode.toString()}`;
+  }
+  constructor(
+    public forKeyword: Token,
+    public init: BaseNode,
+    public condition: BaseNode,
+    public stepNode: BaseNode,
+    public bodyNode: BaseNode
+  ) {
+    super(forKeyword.posStart, bodyNode.posEnd);
+  }
+}
+
 /**
  * 将token表解析为AST语法树
  */
@@ -230,7 +293,25 @@ export class Parser {
     this.next();
   }
 
-  next() {
+  parse(): BaseNode {
+    if (this.token.is(TT.EOF)) {
+      return new NullNode(this.token);
+    }
+
+    const result: BaseNode = this.statement();
+
+    if (this.token.type !== TT.EOF) {
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
+    }
+
+    return result;
+  }
+
+  private next() {
     if (this.pos < this.tokens.length) {
       this.token = this.tokens[this.pos++];
     } else {
@@ -238,8 +319,36 @@ export class Parser {
     }
   }
 
-  peek(offset: number): Token {
+  private peek(offset: number): Token {
     return this.tokens[this.pos + offset - 1];
+  }
+
+  private matchKeywordToken(keyword: string): Token {
+    if (this.token.isKeyword(keyword)) {
+      const result = this.token;
+      this.next();
+      return result;
+    } else {
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
+    }
+  }
+
+  private matchToken(type: TT): Token {
+    if (this.token.is(type)) {
+      const result = this.token;
+      this.next();
+      return result;
+    } else {
+      throw new SyntaxError(
+        `Unexpected token '${this.token.value}'`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
+    }
   }
 
   /**
@@ -298,7 +407,22 @@ export class Parser {
       return 6;
     }
 
-    if (token.is(TT.EQ)) {
+    if (
+      token.is(TT.EQ) ||
+      token.is(TT.PLUS_EQ) ||
+      token.is(TT.MINUS_EQ) ||
+      token.is(TT.MUL_EQ) ||
+      token.is(TT.DIV_EQ) ||
+      token.is(TT.POW_EQ) ||
+      token.is(TT.REMAINDER_EQ) ||
+      token.is(TT.SHL_EQ) ||
+      token.is(TT.SHR_EQ) ||
+      token.is(TT.BAND_EQ) ||
+      token.is(TT.BOR_EQ) ||
+      token.is(TT.XOR_EQ) ||
+      token.is(TT.AND_EQ) ||
+      token.is(TT.OR_EQ)
+    ) {
       return 3;
     }
 
@@ -317,24 +441,6 @@ export class Parser {
     return 0;
   }
 
-  parse(): BaseNode {
-    if (this.token.is(TT.EOF)) {
-      return new NullNode(this.token);
-    }
-
-    const result: BaseNode = this.statement();
-
-    if (this.token.type !== TT.EOF) {
-      throw new SyntaxError(
-        `Unexpected token '${this.token.value}'`,
-        this.token.posStart,
-        this.token.posEnd
-      ).toString();
-    }
-
-    return result;
-  }
-
   private expr(): BaseNode {
     return this.variableAssign();
   }
@@ -345,56 +451,36 @@ export class Parser {
       return this.blockStatement();
     } else if (token.isKeyword("auto")) {
       return this.variableDeclare();
+    } else if (token.isKeyword("if")) {
+      return this.ifStatement();
+    } else if (token.isKeyword("while")) {
+      return this.whileStatement();
+    } else if (token.isKeyword("for")) {
+      return this.forStatement();
     } else {
       return this.expr();
     }
   }
 
   private blockStatement(): BaseNode {
-    const start = this.token;
-    if (start.is(TT.LBLOCK)) {
-      this.next();
+    const start = this.matchToken(TT.LBLOCK);
 
-      const statements = [];
-
-      while (!this.token.is(TT.RBLOCK)) {
-        statements.push(this.statement());
-      }
-
-      const end = this.token;
-      if (end.is(TT.RBLOCK)) {
-        this.next();
-        return new BlockNode(start, statements, end);
-      }
+    const statements = [];
+    while (!this.token.is(TT.RBLOCK)) {
+      statements.push(this.statement());
     }
+
+    const end = this.matchToken(TT.RBLOCK);
+    return new BlockNode(start, statements, end);
   }
 
   private variableDeclare(): BaseNode {
     // auto a = 1
-    const type = this.token;
-    this.next();
-    if (this.token.is(TT.IDENTIFIER)) {
-      const name = this.token;
-      this.next();
-      if (this.token.is(TT.EQ)) {
-        const eq = this.token;
-        this.next();
-        const value = this.expr();
-        return new VarDeclareNode(type, name, eq, value);
-      } else {
-        throw new SyntaxError(
-          `Unexpected token '${this.token.value}'`,
-          this.token.posStart,
-          this.token.posEnd
-        ).toString();
-      }
-    } else {
-      throw new SyntaxError(
-        `Unexpected token '${this.token.value}'`,
-        this.token.posStart,
-        this.token.posEnd
-      ).toString();
-    }
+    const type = this.matchToken(TT.KEYWORD);
+    const name = this.matchToken(TT.IDENTIFIER);
+    const eq = this.matchToken(TT.EQ);
+    const value = this.expr();
+    return new VarDeclareNode(type, name, eq, value);
   }
 
   private variableAssign(): BaseNode {
@@ -402,18 +488,76 @@ export class Parser {
     const name = this.token;
     if (name.is(TT.IDENTIFIER)) {
       const nextToken = this.peek(1);
-      if (nextToken.is(TT.EQ)) {
+      if (
+        nextToken.is(TT.EQ) ||
+        nextToken.is(TT.PLUS_EQ) ||
+        nextToken.is(TT.MINUS_EQ) ||
+        nextToken.is(TT.MUL_EQ) ||
+        nextToken.is(TT.DIV_EQ) ||
+        nextToken.is(TT.POW_EQ) ||
+        nextToken.is(TT.REMAINDER_EQ) ||
+        nextToken.is(TT.SHL_EQ) ||
+        nextToken.is(TT.SHR_EQ) ||
+        nextToken.is(TT.BAND_EQ) ||
+        nextToken.is(TT.XOR_EQ) ||
+        nextToken.is(TT.BOR_EQ) ||
+        nextToken.is(TT.AND_EQ) ||
+        nextToken.is(TT.OR_EQ)
+      ) {
         this.next();
-        const eq = this.token;
+        const operator = this.token;
         this.next();
         const value = this.expr();
-        return new VarAssignNode(name, eq, value);
+        return new VarAssignNode(name, operator, value);
       } else {
         return this.binaryExpr();
       }
     } else {
       return this.binaryExpr();
     }
+  }
+
+  private whileStatement(): BaseNode {
+    const keyword = this.matchKeywordToken("while");
+
+    this.matchToken(TT.LPAREN);
+    const condition = this.expr();
+    this.matchToken(TT.RPAREN);
+
+    const bodyNode = this.statement();
+    return new WhileNode(keyword, condition, bodyNode);
+  }
+
+  private forStatement(): BaseNode {
+    const keyword = this.matchKeywordToken("for");
+    this.matchToken(TT.LPAREN);
+    const init = this.statement();
+    this.matchToken(TT.SEMICOLON);
+
+    const condition = this.expr();
+    this.matchToken(TT.SEMICOLON);
+
+    const step = this.expr();
+    this.matchToken(TT.RPAREN);
+
+    const bodyNode = this.statement();
+    return new ForNode(keyword, init, condition, step, bodyNode);
+  }
+
+  private ifStatement(): BaseNode {
+    const keyword = this.matchKeywordToken("if");
+
+    this.matchToken(TT.LPAREN);
+    const condition = this.expr();
+    this.matchToken(TT.RPAREN);
+
+    const thenNode = this.statement();
+    let elseNode = null;
+    if (this.token.isKeyword("else")) {
+      this.next();
+      elseNode = this.statement();
+    }
+    return new IfNode(keyword, condition, thenNode, elseNode);
   }
 
   private binaryExpr(parentPrecedence = 0): BaseNode {

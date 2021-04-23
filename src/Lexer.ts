@@ -51,9 +51,18 @@ export class Lexer {
       case "\r":
       case "\n":
         return this.makeSpace();
+      case ";": {
+        this.next();
+        return new Token(TT.SEMICOLON, ";", posStart);
+      }
       case "%": {
         this.next();
-        return new Token(TT.REMAINDER, "%", posStart);
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.REMAINDER_EQ, "%=", posStart, this.pos);
+        } else {
+          return new Token(TT.REMAINDER, "%", posStart);
+        }
       }
       case "~": {
         this.next();
@@ -61,24 +70,50 @@ export class Lexer {
       }
       case "+": {
         this.next();
-        return new Token(TT.PLUS, "+", posStart);
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.PLUS_EQ, "+=", posStart, this.pos);
+        } else {
+          return new Token(TT.PLUS, "+", posStart);
+        }
       }
       case "-": {
         this.next();
-        return new Token(TT.MINUS, "-", posStart);
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.MINUS_EQ, "-=", posStart, this.pos);
+        } else {
+          return new Token(TT.MINUS, "-", posStart);
+        }
       }
       case "*": {
         this.next();
         if ((this.c as string) === "*") {
           this.next();
+
+          if ((this.c as string) === "=") {
+            this.next();
+            return new Token(TT.POW_EQ, "**=", posStart, this.pos);
+          }
+
           return new Token(TT.POW, "**", posStart, this.pos);
-        } else {
-          return new Token(TT.MUL, "*", posStart);
         }
+
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.MUL_EQ, "*=", posStart, this.pos);
+        }
+
+        return new Token(TT.MUL, "*", posStart);
       }
       case "/": {
         this.next();
-        return new Token(TT.DIV, "/", posStart);
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.DIV_EQ, "/=", posStart, this.pos);
+        } else {
+          return new Token(TT.DIV, "/", posStart);
+        }
       }
       case "(": {
         this.next();
@@ -111,29 +146,45 @@ export class Lexer {
       }
       case "^":
         this.next();
+        if ((this.c as string) === "=") {
+          this.next();
+          return new Token(TT.XOR_EQ, "^=", posStart);
+        }
         return new Token(TT.XOR, "^", posStart);
       case "<": {
         this.next();
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.LTE, "<=", posStart, this.pos);
-        } else if ((this.c as string) === "<") {
-          this.next();
-          return new Token(TT.SHL, "<<", posStart, this.pos);
-        } else {
-          return new Token(TT.LT, "<", posStart);
         }
+
+        if ((this.c as string) === "<") {
+          this.next();
+          if ((this.c as string) === "=") {
+            this.next();
+            return new Token(TT.SHL_EQ, "<<=", posStart, this.pos);
+          }
+          return new Token(TT.SHL, "<<", posStart, this.pos);
+        }
+        return new Token(TT.LT, "<", posStart);
       }
       case ">": {
         this.next();
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.GTE, ">=", posStart, this.pos);
-        } else if ((this.c as string) === ">") {
-          return new Token(TT.SHR, ">>", posStart, this.pos);
-        } else {
-          return new Token(TT.GT, ">", posStart);
         }
+
+        if ((this.c as string) === ">") {
+          this.next();
+          if ((this.c as string) === "=") {
+            this.next();
+            return new Token(TT.SHR_EQ, ">>=", posStart, this.pos);
+          }
+          return new Token(TT.SHR, ">>", posStart, this.pos);
+        }
+
+        return new Token(TT.GT, ">", posStart);
       }
       case "=": {
         this.next();
@@ -148,19 +199,41 @@ export class Lexer {
         this.next();
         if (this.c === "&") {
           this.next();
+
+          if ((this.c as string) === "=") {
+            this.next();
+            return new Token(TT.AND_EQ, "&&=", posStart, this.pos);
+          }
+
           return new Token(TT.AND, "&&", posStart, this.pos);
-        } else {
-          return new Token(TT.BAND, "&", posStart);
         }
+
+        if (this.c === "=") {
+          this.next();
+          return new Token(TT.BAND_EQ, "&=", posStart, this.pos);
+        }
+
+        return new Token(TT.BAND, "&", posStart);
       }
       case "|": {
         this.next();
         if (this.c === "|") {
           this.next();
+
+          if ((this.c as string) === "=") {
+            this.next();
+            return new Token(TT.OR_EQ, "||=", posStart, this.pos);
+          }
+
           return new Token(TT.OR, "||", posStart, this.pos);
-        } else {
-          return new Token(TT.BOR, "|", posStart);
         }
+
+        if (this.c === "=") {
+          this.next();
+          return new Token(TT.BOR_EQ, "|=", posStart, this.pos);
+        }
+
+        return new Token(TT.BOR, "|", posStart);
       }
       default:
         this.next();
