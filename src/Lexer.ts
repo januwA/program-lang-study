@@ -2,6 +2,10 @@ import { SyntaxError } from "./BaseError";
 import { Position } from "./Position";
 import { KEYWORD, Token, TT } from "./Token";
 
+const DEC_EXP = /[\d\.]/;
+const NUMBER_EXP = /[a-f\d\._]/i;
+const IDENT_EXP = /\w/; // [A-Za-z0-9_]
+
 /**
  * 将源码字符串解析为Token表
  */
@@ -29,14 +33,14 @@ export class Lexer {
 
   nextToken(): Token {
     const posStart: Position = this.pos.copy();
-    if (/[\d\.]/.test(this.c)) {
+    if (DEC_EXP.test(this.c)) {
       return this.makeNumber();
     }
 
-    if (/\w/.test(this.c)) {
+    if (IDENT_EXP.test(this.c)) {
       let type = TT.IDENTIFIER;
       let val: string = "";
-      while (/\w/.test(this.c)) {
+      while (IDENT_EXP.test(this.c)) {
         val += this.c;
         this.next();
       }
@@ -51,9 +55,19 @@ export class Lexer {
       case "\r":
       case "\n":
         return this.makeSpace();
+      case '"': {
+        return this.makeString('"');
+      }
+      case "'": {
+        return this.makeString("'");
+      }
       case ";": {
         this.next();
         return new Token(TT.SEMICOLON, ";", posStart);
+      }
+      case ":": {
+        this.next();
+        return new Token(TT.COLON, ":", posStart);
       }
       case "?": {
         this.next();
@@ -256,6 +270,33 @@ export class Lexer {
         ).toString();
     }
   }
+  makeString(c: string): Token {
+    const posStart = this.pos.copy();
+    let val = "";
+    let escapeCharacter = false;
+    const escapeCaracters = {
+      n: "\n",
+      r: "\r",
+      t: "\t",
+    };
+    this.next();
+    while (this.c !== c || escapeCharacter) {
+      if (escapeCharacter) {
+        val += escapeCaracters[this.c] || this.c;
+        escapeCharacter = false;
+      } else {
+        if (this.c === "\\") {
+          escapeCharacter = true;
+        } else {
+          val += this.c;
+          escapeCharacter = false;
+        }
+      }
+      this.next();
+    }
+    this.next();
+    return new Token(TT.STRING, val, posStart, this.pos);
+  }
 
   /**
    * number 语法
@@ -291,8 +332,7 @@ export class Lexer {
       }
     }
 
-    const exp = /[a-f\d\._]/i;
-    while (exp.test(this.c)) {
+    while (NUMBER_EXP.test(this.c)) {
       if (this.c === ".") {
         if (type !== TT.DEC) throw `Syntax Error: Unexpected hex`;
         if (isFloat) break;

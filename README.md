@@ -22,9 +22,14 @@ bin: 0b1100_1000, 0y1100_1000, 11001000b, 1100_1000b, 1100_1000y
 ### [运算符优先级](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Operator_Precedence)
 
 
-## Bool
+## bool
 ```
 true, false
+```
+
+## string
+```
+"str", 'str', 'str\'str\'', "str'str'"
 ```
 
 ## Null
@@ -36,4 +41,12 @@ null
 ```
 auto a = 1
 a = 2
+
+int a = 1
+a = 1.2 // error
+```
+
+# constant
+```
+const auto a = 1
 ```

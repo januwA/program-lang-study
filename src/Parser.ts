@@ -1,6 +1,6 @@
 import { SyntaxError } from "./BaseError";
-import { Position } from "./Position";
-import { KEYWORD, Token, TT } from "./Token";
+import { LabelSymbol } from "./Context";
+import { KEYWORD, Token, TT, TYPES } from "./Token";
 
 // node type
 
@@ -21,15 +21,23 @@ export enum NT {
   IF,
   WHILE,
   FOR,
+  JMP,
+  LABEL,
+  STRING,
 }
 
 export abstract class BaseNode {
-  constructor(public posStart: Position, public posEnd: Position) {}
+  static labelCound = 0;
+  static GeneratorLabel(): LabelSymbol {
+    const name = `label{${BaseNode.labelCound}}`;
+    return new LabelSymbol(name);
+  }
   abstract toString(): string;
   abstract id(): NT;
 }
 
 export class DecNode extends BaseNode {
+  value: number;
   id(): NT {
     return NT.DEC;
   }
@@ -37,46 +45,51 @@ export class DecNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+    this.value = parseInt(token.value, 10);
   }
 }
 export class HexNode extends BaseNode {
+  value: number;
   id(): NT {
     return NT.HEX;
   }
   toString(): string {
-    return this.token.value;
+    return this.token.value + "h";
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+    this.value = parseInt(token.value, 16);
   }
 }
-
 export class OctNode extends BaseNode {
+  value: number;
   id(): NT {
     return NT.OCT;
   }
   toString(): string {
-    return this.token.value;
+    return this.token.value + "o";
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+    this.value = parseInt(token.value, 8);
   }
 }
-
 export class BinNode extends BaseNode {
+  value: number;
   id(): NT {
     return NT.BIN;
   }
   toString(): string {
-    return this.token.value;
+    return this.token.value + "b";
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+    this.value = parseInt(token.value.replace(/_/g, ""), 2);
   }
 }
-
 export class FloatNode extends BaseNode {
+  value: number;
   id(): NT {
     return NT.FLOAT;
   }
@@ -84,10 +97,10 @@ export class FloatNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+    this.value = parseFloat(token.value);
   }
 }
-
 export class BinaryNode extends BaseNode {
   id(): NT {
     return NT.BINARY;
@@ -102,10 +115,9 @@ export class BinaryNode extends BaseNode {
     public token: Token,
     public right: BaseNode
   ) {
-    super(left.posStart, right.posEnd);
+    super();
   }
 }
-
 export class UnaryNode extends BaseNode {
   id(): NT {
     return NT.UNARY;
@@ -114,10 +126,9 @@ export class UnaryNode extends BaseNode {
     return `${this.token.value}${this.node.toString()}`;
   }
   constructor(public token: Token, public node: BaseNode) {
-    super(token.posStart, node.posEnd);
+    super();
   }
 }
-
 export class BoolNode extends BaseNode {
   id(): NT {
     return NT.BOOL;
@@ -126,10 +137,9 @@ export class BoolNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
   }
 }
-
 export class NullNode extends BaseNode {
   id(): NT {
     return NT.NULL;
@@ -138,7 +148,18 @@ export class NullNode extends BaseNode {
     return this.token.value;
   }
   constructor(public token: Token) {
-    super(token.posStart, token.posEnd);
+    super();
+  }
+}
+export class StringNode extends BaseNode {
+  id(): NT {
+    return NT.STRING;
+  }
+  toString(): string {
+    return `"${this.token.value}"`;
+  }
+  constructor(public token: Token) {
+    super();
   }
 }
 
@@ -148,6 +169,7 @@ export class NullNode extends BaseNode {
  * auto a = 1
  * int a = 1
  * float a = 1.2
+ * const auto a = 1
  */
 export class VarDeclareNode extends BaseNode {
   id(): NT {
@@ -157,12 +179,12 @@ export class VarDeclareNode extends BaseNode {
     return `(${this.type.value} ${this.name.value} = ${this.value.toString()})`;
   }
   constructor(
+    public isConst: boolean,
     public type: Token,
     public name: Token,
-    public eq: Token,
     public value: BaseNode
   ) {
-    super(type.posStart, value.posEnd);
+    super();
   }
 }
 
@@ -171,8 +193,6 @@ export class VarDeclareNode extends BaseNode {
  *
  * a = 1
  * a += 1
- *
- * ident EQ expr
  */
 export class VarAssignNode extends BaseNode {
   id(): NT {
@@ -186,7 +206,7 @@ export class VarAssignNode extends BaseNode {
     public operator: Token,
     public value: BaseNode
   ) {
-    super(name.posStart, value.posEnd);
+    super();
   }
 }
 
@@ -203,7 +223,7 @@ export class VarAccessNode extends BaseNode {
     return `${this.name.value}`;
   }
   constructor(public name: Token) {
-    super(name.posStart, name.posEnd);
+    super();
   }
 }
 
@@ -218,12 +238,8 @@ export class BlockNode extends BaseNode {
         return acc + it;
       }, "")} }`;
   }
-  constructor(
-    public start: Token,
-    public statements: BaseNode[],
-    public end: Token
-  ) {
-    super(start.posStart, end.posEnd);
+  constructor(public statements: BaseNode[]) {
+    super();
   }
 }
 
@@ -240,12 +256,11 @@ export class IfNode extends BaseNode {
     return str;
   }
   constructor(
-    public ifKeyword: Token,
     public condition: BaseNode,
     public thenNode: BaseNode,
     public elseNode?: BaseNode
   ) {
-    super(ifKeyword.posStart, elseNode ? elseNode.posEnd : thenNode.posEnd);
+    super();
   }
 }
 
@@ -256,12 +271,8 @@ export class WhileNode extends BaseNode {
   toString(): string {
     return `while (${this.condition.toString()}) ${this.bodyNode.toString()}`;
   }
-  constructor(
-    public whileKeyword: Token,
-    public condition: BaseNode,
-    public bodyNode: BaseNode
-  ) {
-    super(whileKeyword.posStart, bodyNode.posEnd);
+  constructor(public condition: BaseNode, public bodyNode: BaseNode) {
+    super();
   }
 }
 
@@ -270,16 +281,47 @@ export class ForNode extends BaseNode {
     return NT.FOR;
   }
   toString(): string {
-    return `for (${this.condition.toString()}) ${this.bodyNode.toString()}`;
+    return `for (${this.init.toString()}; ${this.condition.toString()}; ${this.stepNode.toString()}) ${this.bodyNode.toString()}`;
   }
   constructor(
-    public forKeyword: Token,
     public init: BaseNode,
     public condition: BaseNode,
     public stepNode: BaseNode,
     public bodyNode: BaseNode
   ) {
-    super(forKeyword.posStart, bodyNode.posEnd);
+    super();
+  }
+}
+
+// 定义label
+export class LabelNode extends BaseNode {
+  toString(): string {
+    return ``;
+  }
+  id(): NT {
+    return NT.LABEL;
+  }
+  reWrite(): BaseNode {
+    return this;
+  }
+  constructor(public label: LabelSymbol) {
+    super();
+  }
+}
+
+// 无条件跳转
+export class JmpNode extends BaseNode {
+  toString(): string {
+    return `jmp ${this.label.name}`;
+  }
+  id(): NT {
+    return NT.JMP;
+  }
+  reWrite(): BaseNode {
+    return this;
+  }
+  constructor(public label: LabelSymbol) {
+    super();
   }
 }
 
@@ -302,7 +344,7 @@ export class Parser {
 
     if (this.token.type !== TT.EOF) {
       throw new SyntaxError(
-        `Unexpected token '${this.token.value}'`,
+        `Unexpected token EOF`,
         this.token.posStart,
         this.token.posEnd
       ).toString();
@@ -454,7 +496,16 @@ export class Parser {
     const token = this.token;
     if (token.is(TT.LBLOCK)) {
       return this.blockStatement();
-    } else if (token.isKeyword("auto")) {
+    } else if (token.isKeyword("const")) {
+      this.next();
+      return this.variableDeclare(true);
+    } else if (
+      token.isKeyword(TYPES.auto) ||
+      token.isKeyword(TYPES.bool) ||
+      token.isKeyword(TYPES.int) ||
+      token.isKeyword(TYPES.float) ||
+      token.isKeyword(TYPES.string)
+    ) {
       return this.variableDeclare();
     } else if (token.isKeyword("if")) {
       return this.ifStatement();
@@ -468,24 +519,23 @@ export class Parser {
   }
 
   private blockStatement(): BaseNode {
-    const start = this.matchToken(TT.LBLOCK);
+    this.matchToken(TT.LBLOCK);
 
     const statements = [];
     while (!this.token.is(TT.RBLOCK)) {
       statements.push(this.statement());
     }
-
-    const end = this.matchToken(TT.RBLOCK);
-    return new BlockNode(start, statements, end);
+    this.matchToken(TT.RBLOCK);
+    return new BlockNode(statements);
   }
 
-  private variableDeclare(): BaseNode {
+  private variableDeclare(isConst = false): BaseNode {
     // auto a = 1
     const type = this.matchToken(TT.KEYWORD);
     const name = this.matchToken(TT.IDENTIFIER);
-    const eq = this.matchToken(TT.EQ);
+    this.matchToken(TT.EQ);
     const value = this.expr();
-    return new VarDeclareNode(type, name, eq, value);
+    return new VarDeclareNode(isConst, type, name, value);
   }
 
   private variableAssign(): BaseNode {
@@ -524,18 +574,18 @@ export class Parser {
   }
 
   private whileStatement(): BaseNode {
-    const keyword = this.matchKeywordToken("while");
+    this.matchKeywordToken("while");
 
     this.matchToken(TT.LPAREN);
     const condition = this.expr();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
-    return new WhileNode(keyword, condition, bodyNode);
+    return new WhileNode(condition, bodyNode);
   }
 
   private forStatement(): BaseNode {
-    const keyword = this.matchKeywordToken("for");
+    this.matchKeywordToken("for");
     this.matchToken(TT.LPAREN);
     const init = this.statement();
     this.matchToken(TT.SEMICOLON);
@@ -547,11 +597,11 @@ export class Parser {
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
-    return new ForNode(keyword, init, condition, step, bodyNode);
+    return new ForNode(init, condition, step, bodyNode);
   }
 
   private ifStatement(): BaseNode {
-    const keyword = this.matchKeywordToken("if");
+    this.matchKeywordToken("if");
 
     this.matchToken(TT.LPAREN);
     const condition = this.expr();
@@ -563,7 +613,7 @@ export class Parser {
       this.next();
       elseNode = this.statement();
     }
-    return new IfNode(keyword, condition, thenNode, elseNode);
+    return new IfNode(condition, thenNode, elseNode);
   }
 
   private binaryExpr(parentPrecedence = 0): BaseNode {
@@ -608,6 +658,9 @@ export class Parser {
     } else if (token.is(TT.FLOAT)) {
       this.next();
       return new FloatNode(token);
+    } else if (token.is(TT.STRING)) {
+      this.next();
+      return new StringNode(token);
     } else if (token.is(TT.IDENTIFIER)) {
       this.next();
       return new VarAccessNode(token);

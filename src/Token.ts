@@ -6,6 +6,7 @@ export enum TT {
   OCT = "OCT", // 八进制
   BIN = "BIN", // 二进制
   FLOAT = "FLOAT", // 浮点数
+  STRING = "STRING", // 字符串
   SPACE = "SPACE", // " "
   LPAREN = "LPAREN", // (
   RPAREN = "RPAREN", // )
@@ -14,6 +15,7 @@ export enum TT {
   LSQUARE = "LSQUARE", // [
   RSQUARE = "RSQUARE", // ]
   SEMICOLON = "SEMICOLON", // ;
+  COLON = "COLON", // :
   QMAKE = "QMAKE", // ?
 
   // 运算
@@ -64,15 +66,33 @@ export enum TT {
   EOF = "EOF",
 }
 
+export enum TYPES {
+  auto = "auto",
+  bool = "bool",
+  int = "int",
+  float = "float",
+  string = "string",
+  Null = "Null",
+}
+
 export const KEYWORD = [
   "true",
   "false",
   "null",
-  "auto",
+
+  "const",
+  TYPES.auto,
+  TYPES.bool,
+  TYPES.int,
+  TYPES.float,
+  TYPES.string,
+  TYPES.Null,
+
   "if",
   "else",
   "while",
   "for",
+  "jmp",
 ];
 
 export class Token {

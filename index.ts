@@ -6,12 +6,16 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
+let oldText = "";
 const waitForUserInput = function () {
-  rl.question("> ", (text) => {
+  const query = oldText ? "... " : "> ";
+  rl.question(query, (text) => {
     try {
-      run(text);
-    } catch (error) {
-      console.log(error);
+      run(oldText + text);
+      oldText = "";
+    } catch (error: any) {
+      oldText += text + "\n";
+      // console.log(error);
     }
     waitForUserInput();
   });
@@ -19,4 +23,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run("a=1");
+// run("{");
