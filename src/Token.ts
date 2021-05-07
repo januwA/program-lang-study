@@ -17,6 +17,7 @@ export enum TT {
   SEMICOLON = "SEMICOLON", // ;
   COLON = "COLON", // :
   QMAKE = "QMAKE", // ?
+  COMMA = "COMMA", // ,
 
   // 运算
   PLUS = "PLUS", // +
@@ -73,6 +74,7 @@ export enum TYPES {
   float = "float",
   string = "string",
   Null = "Null",
+  fun = "fun",
 }
 
 export const KEYWORD = [
@@ -87,6 +89,7 @@ export const KEYWORD = [
   TYPES.float,
   TYPES.string,
   TYPES.Null,
+  TYPES.fun,
 
   "if",
   "else",

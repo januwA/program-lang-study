@@ -1,10 +1,10 @@
 import { Context, VariableSymbol } from "./Context";
 import {
-  BaseNode,
   BinaryNode,
   BinNode,
   BlockNode,
   BoolNode,
+  CallNode,
   DecNode,
   FloatNode,
   ForNode,
@@ -19,608 +19,18 @@ import {
   VarAssignNode,
   VarDeclareNode,
   WhileNode,
-} from "./Parser";
+} from "./BaseNode";
+import { BaseNode } from "./BaseNode";
 import { TT, TYPES } from "./Token";
-import { ReferenceError, SyntaxError } from "./BaseError";
-
-export abstract class BaseValue {
-  abstract toString(): string;
-
-  abstract typeof(): string;
-
-  abstract not(): BoolValue;
-  abstract bnot(): IntValue;
-
-  abstract pow(other: BaseValue): BaseValue;
-  abstract add(other: BaseValue): BaseValue;
-  abstract sub(other: BaseValue): BaseValue;
-  abstract mul(other: BaseValue): BaseValue;
-  abstract div(other: BaseValue): BaseValue;
-  abstract remainder(other: BaseValue): BaseValue;
-
-  abstract band(other: BaseValue): BaseValue;
-  abstract bor(other: BaseValue): BaseValue;
-  abstract xor(other: BaseValue): BaseValue;
-  abstract shl(other: BaseValue): BaseValue;
-  abstract shr(other: BaseValue): BaseValue;
-
-  abstract and(other: BaseValue): BaseValue;
-  abstract or(other: BaseValue): BaseValue;
-
-  abstract nullishCoalescing(other: BaseValue): BaseValue;
-
-  // cmp
-  abstract lt(other: BaseValue): BoolValue;
-  abstract gt(other: BaseValue): BoolValue;
-  abstract lte(other: BaseValue): BoolValue;
-  abstract gte(other: BaseValue): BoolValue;
-  abstract ee(other: BaseValue): BoolValue;
-  abstract ne(other: BaseValue): BoolValue;
-
-  // is bool
-  abstract isTren(): boolean;
-}
-
-export class IntValue extends BaseValue {
-  typeof(): string {
-    return TYPES.int;
-  }
-  isTren(): boolean {
-    return false;
-  }
-  nullishCoalescing(other: BaseValue): BaseValue {
-    return this;
-  }
-  pow(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value ** other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value ** other.value);
-    }
-    throw new Error("IntValue pow.");
-  }
-  remainder(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value % other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value % other.value);
-    }
-    throw new Error("IntValue remainder.");
-  }
-  xor(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value ^ other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value ^ other.value);
-    }
-    throw new Error("IntValue xor.");
-  }
-  bnot(): IntValue {
-    return new IntValue(~this.value);
-  }
-  shl(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value << other.value);
-    }
-    throw new Error("IntValue shl.");
-  }
-  shr(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value >> other.value);
-    }
-    throw new Error("IntValue shr.");
-  }
-  lt(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value < other.value);
-    }
-    throw new Error("IntValue lt.");
-  }
-  gt(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value > other.value);
-    }
-    throw new Error("IntValue gt.");
-  }
-  lte(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value <= other.value);
-    }
-    throw new Error("IntValue lte.");
-  }
-  gte(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value >= other.value);
-    }
-    throw new Error("IntValue gte.");
-  }
-  ee(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value === other.value);
-    }
-    throw new Error("IntValue ee.");
-  }
-  ne(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value !== other.value);
-    }
-    throw new Error("IntValue ne.");
-  }
-  and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
-  }
-  or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
-  }
-  band(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value & other.value);
-    }
-    throw new Error("BaseValue band.");
-  }
-  bor(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value | other.value);
-    }
-    throw new Error("BaseValue bor.");
-  }
-  not(): BoolValue {
-    return new BoolValue(!this.value);
-  }
-  add(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value + other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value + other.value);
-    }
-
-    throw new Error("IntValue add.");
-  }
-  sub(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value - other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value - other.value);
-    }
-
-    throw new Error("IntValue sub.");
-  }
-  mul(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value * other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value * other.value);
-    }
-
-    throw new Error("IntValue mul.");
-  }
-  div(other: BaseValue): BaseValue {
-    if (other instanceof IntValue) {
-      return new IntValue(this.value / other.value);
-    } else if (other instanceof FloatValue) {
-      return new FloatValue(this.value / other.value);
-    }
-
-    throw new Error("BaseValue div.");
-  }
-  toString(): string {
-    return this.value.toString();
-  }
-  constructor(public value: number) {
-    super();
-  }
-}
-
-export class FloatValue extends BaseValue {
-  typeof(): string {
-    return TYPES.float;
-  }
-  isTren(): boolean {
-    return false;
-  }
-  nullishCoalescing(other: BaseValue): BaseValue {
-    return this;
-  }
-  pow(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new FloatValue(this.value ** other.value);
-    }
-    throw new Error("BaseValue pow.");
-  }
-  remainder(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value % other.value);
-    }
-    throw new Error("BaseValue remainder.");
-  }
-  xor(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value ^ other.value);
-    }
-    throw new Error("BaseValue xor.");
-  }
-  bnot(): IntValue {
-    return new IntValue(~this.value);
-  }
-  shl(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value << other.value);
-    }
-    throw new Error("BaseValue shl.");
-  }
-  shr(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value >> other.value);
-    }
-    throw new Error("BaseValue shr.");
-  }
-  lt(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value < other.value);
-    }
-    throw new Error("BaseValue lt.");
-  }
-  gt(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value > other.value);
-    }
-    throw new Error("BaseValue gt.");
-  }
-  lte(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value <= other.value);
-    }
-    throw new Error("BaseValue lte.");
-  }
-  gte(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value >= other.value);
-    }
-    throw new Error("BaseValue gte.");
-  }
-  ee(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value === other.value);
-    }
-    throw new Error("BaseValue ee.");
-  }
-  ne(other: BaseValue): BoolValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new BoolValue(this.value !== other.value);
-    }
-    throw new Error("BaseValue ne.");
-  }
-  and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
-  }
-  or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
-  }
-  band(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value & other.value);
-    }
-    throw new Error("BaseValue band.");
-  }
-  bor(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new IntValue(this.value | other.value);
-    }
-    throw new Error("BaseValue bor.");
-  }
-  not(): BoolValue {
-    return new BoolValue(!this.value);
-  }
-  add(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new FloatValue(this.value + other.value);
-    }
-
-    throw new Error("BaseValue add.");
-  }
-  sub(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new FloatValue(this.value - other.value);
-    }
-
-    throw new Error("BaseValue sub.");
-  }
-  mul(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new FloatValue(this.value * other.value);
-    }
-
-    throw new Error("BaseValue mul.");
-  }
-  div(other: BaseValue): BaseValue {
-    if (other instanceof IntValue || other instanceof FloatValue) {
-      return new FloatValue(this.value / other.value);
-    }
-
-    throw new Error("BaseValue div.");
-  }
-  toString(): string {
-    return this.value.toString();
-  }
-  constructor(public value: number) {
-    super();
-  }
-}
-
-export class BoolValue extends BaseValue {
-  isTren(): boolean {
-    return this.value;
-  }
-  nullishCoalescing(other: BaseValue): BaseValue {
-    return this;
-  }
-  typeof(): string {
-    return TYPES.bool;
-  }
-  pow(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  remainder(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  xor(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  bnot(): IntValue {
-    throw new Error("Method not implemented.");
-  }
-  shl(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  shr(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  lt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  lte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  ee(other: BaseValue): BoolValue {
-    if (other instanceof BoolValue) {
-      return new BoolValue(this.value === other.value);
-    }
-    throw new Error("BoolValue ee.");
-  }
-  ne(other: BaseValue): BoolValue {
-    if (other instanceof BoolValue) {
-      return new BoolValue(this.value !== other.value);
-    }
-    throw new Error("BoolValue ne.");
-  }
-  and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
-  }
-  or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
-  }
-  band(other: BaseValue): BaseValue {
-    throw new Error("BoolValue band.");
-  }
-  bor(other: BaseValue): BaseValue {
-    throw new Error("BoolValue bor.");
-  }
-  not(): BoolValue {
-    return new BoolValue(!this.value);
-  }
-  toString(): string {
-    return this.value ? "true" : "false";
-  }
-  add(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  sub(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  mul(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  div(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  constructor(public value: boolean) {
-    super();
-  }
-}
-
-export class NullValue extends BaseValue {
-  isTren(): boolean {
-    return false;
-  }
-  nullishCoalescing(other: BaseValue): BaseValue {
-    return other;
-  }
-
-  typeof(): string {
-    return TYPES.Null;
-  }
-
-  toString(): string {
-    return "null";
-  }
-  not(): BoolValue {
-    return new BoolValue(true);
-  }
-  bnot(): IntValue {
-    throw new Error("Method not implemented.");
-  }
-  pow(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  add(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  sub(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  mul(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  div(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  remainder(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  band(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  bor(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  xor(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  shl(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  shr(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  and(other: BaseValue): BaseValue {
-    return this;
-  }
-  or(other: BaseValue): BaseValue {
-    return other;
-  }
-  lt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  lte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  ee(other: BaseValue): BoolValue {
-    if (other instanceof NullValue) {
-      return new BoolValue(true);
-    }
-    return new BoolValue(false);
-  }
-  ne(other: BaseValue): BoolValue {
-    if (other instanceof NullValue) {
-      return new BoolValue(false);
-    }
-    return new BoolValue(true);
-  }
-}
-
-export class StringValue extends BaseValue {
-  toString(): string {
-    return `"${this.value}"`;
-  }
-  typeof(): string {
-    return TYPES.string;
-  }
-  not(): BoolValue {
-    return new BoolValue(!this.value);
-  }
-  bnot(): IntValue {
-    throw new Error("Method not implemented.");
-  }
-  pow(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  add(other: BaseValue): BaseValue {
-    if (other instanceof StringValue) {
-      return new StringValue(this.value + other.value);
-    }
-
-    throw new Error("Method not implemented.");
-  }
-  sub(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  mul(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  div(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  remainder(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  band(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  bor(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  xor(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  shl(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  shr(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
-  }
-  and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
-  }
-  or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
-  }
-  nullishCoalescing(other: BaseValue): BaseValue {
-    return this;
-  }
-  lt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gt(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  lte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  gte(other: BaseValue): BoolValue {
-    throw new Error("Method not implemented.");
-  }
-  ee(other: BaseValue): BoolValue {
-    if (other instanceof StringValue) {
-      return new BoolValue(this.value === other.value);
-    }
-
-    return new BoolValue(false);
-  }
-  ne(other: BaseValue): BoolValue {
-    if (other instanceof StringValue) {
-      return new BoolValue(this.value !== other.value);
-    }
-
-    return new BoolValue(true);
-  }
-  isTren(): boolean {
-    return false;
-  }
-
-  constructor(public value: string) {
-    super();
-  }
-}
+import {
+  BaseFunctionValue,
+  BaseValue,
+  BoolValue,
+  FloatValue,
+  IntValue,
+  NullValue,
+  StringValue,
+} from "./BaseValue";
 
 /**
  * 解析语法树
@@ -664,10 +74,25 @@ export class Interpreter {
         return this.visitWhile(node as WhileNode, context);
       case NT.FOR:
         return this.visitFor(node as ForNode, context);
+      case NT.CALL:
+        return this.visitCall(node as CallNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
   }
+
+  visitCall(node: CallNode, context: Context): BaseValue {
+    const funValue: BaseValue = this.visit(node.name, context);
+    if (funValue instanceof BaseFunctionValue) {
+      return funValue.call(
+        node.args.map((arg) => this.visit(arg, context)),
+        context
+      );
+    } else {
+      throw `${funValue.toString()} is not a function`;
+    }
+  }
+
   visitString(node: StringNode): BaseValue {
     return new StringValue(node.token.value);
   }
@@ -801,7 +226,7 @@ export class Interpreter {
 
       context.declareVariable(
         name,
-        new VariableSymbol(node.isConst, node.type.value, name, value)
+        new VariableSymbol(node.isConst, node.type.value, value)
       );
       return value;
     } else {
@@ -824,6 +249,20 @@ export class Interpreter {
         return this.visit(node.node, context).not();
       case TT.BNOT:
         return this.visit(node.node, context).bnot();
+      case TT.KEYWORD: {
+        switch (node.token.value) {
+          case TYPES.int:
+            return this.visit(node.node, context).toInt();
+          case TYPES.float:
+            return this.visit(node.node, context).toFloat();
+          case TYPES.string:
+            return this.visit(node.node, context).toStr();
+          case TYPES.bool:
+            return this.visit(node.node, context).toBool();
+          default:
+            break;
+        }
+      }
       default:
         throw `Runtime Error: Unexpected token '${node.token.type}'`;
     }

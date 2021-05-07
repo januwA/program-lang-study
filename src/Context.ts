@@ -1,10 +1,9 @@
-import { BaseValue } from "./Interpreter";
+import { BaseValue } from "./BaseValue";
 
 export class VariableSymbol {
   constructor(
     public isConst: boolean,
     public type: string,
-    public name: string,
     public value: BaseValue
   ) {}
 }

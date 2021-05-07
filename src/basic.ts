@@ -1,10 +1,21 @@
-import { Context } from "./Context";
-import { BaseValue, Interpreter, IntValue } from "./Interpreter";
+import { Context, VariableSymbol } from "./Context";
+import { Interpreter } from "./Interpreter";
+import { BaseValue, BuiltInFunction } from "./BaseValue";
 import { Lexer } from "./Lexer";
-import { BaseNode, Parser } from "./Parser";
-import { Token, TT } from "./Token";
+import { Parser } from "./Parser";
+import { BaseNode } from "./BaseNode";
+import { Token, TT, TYPES } from "./Token";
 
 const globalContext: Context = new Context(null);
+
+globalContext.declareVariable(
+  "print",
+  new VariableSymbol(true, TYPES.fun, BuiltInFunction.print())
+);
+globalContext.declareVariable(
+  "typeof",
+  new VariableSymbol(true, TYPES.fun, BuiltInFunction.typeof())
+);
 
 export function run(text: string) {
   const lexer = new Lexer(text);

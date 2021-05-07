@@ -50,3 +50,21 @@ a = 1.2 // error
 ```
 const auto a = 1
 ```
+
+# call
+```
+print(123)
+
+typeof(123)   => "int"
+typeof(1.23)  => "float"
+typeof("123") => "string"
+```
+
+# Conversion
+```
+(int)1.23  => 1
+(int)"1.23"  => 1
+
+(float)1   => 1.0
+(string)1   => "1"
+```

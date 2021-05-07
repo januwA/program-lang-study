@@ -27,7 +27,7 @@ export class Lexer {
     while (this.c !== "\0") {
       tokens.push(this.nextToken());
     }
-    tokens.push(new Token(TT.EOF, "", this.pos));
+    tokens.push(new Token(TT.EOF, "EOF", this.pos));
     return tokens;
   }
 
@@ -64,6 +64,10 @@ export class Lexer {
       case ";": {
         this.next();
         return new Token(TT.SEMICOLON, ";", posStart);
+      }
+      case ",": {
+        this.next();
+        return new Token(TT.COMMA, ",", posStart);
       }
       case ":": {
         this.next();

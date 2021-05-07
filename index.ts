@@ -23,4 +23,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run("{");
+// run("(int)1.2");
