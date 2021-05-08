@@ -4,13 +4,17 @@ import {
   BinaryNode,
   BinNode,
   BlockNode,
+  BlockType,
   BoolNode,
   CallNode,
   DecNode,
   FloatNode,
   ForNode,
+  FunNode,
+  FunParam,
   HexNode,
   IfNode,
+  MemberNode,
   NullNode,
   OctNode,
   StringNode,
@@ -20,7 +24,7 @@ import {
   VarDeclareNode,
   WhileNode,
 } from "./BaseNode";
-import { Token, TT, TYPES } from "./Token";
+import { KEYWORD, Token, TT, TYPES } from "./Token";
 
 /**
  * 将token表解析为AST语法树
@@ -30,24 +34,6 @@ export class Parser {
   pos = 0;
   constructor(public tokens: Token[]) {
     this.next();
-  }
-
-  parse(): BaseNode {
-    if (this.token.is(TT.EOF)) {
-      return new NullNode(this.token);
-    }
-
-    const result: BaseNode = this.statement();
-
-    if (this.token.type !== TT.EOF) {
-      throw new SyntaxError(
-        `Unexpected token EOF`,
-        this.token.posStart,
-        this.token.posEnd
-      ).toString();
-    }
-
-    return result;
   }
 
   private next() {
@@ -189,7 +175,86 @@ export class Parser {
     return this.variableAssign();
   }
 
-  private statement() {
+  parse(): BaseNode {
+    if (this.token.is(TT.EOF)) return new NullNode(this.token);
+
+    const result: BaseNode = this.members();
+
+    if (!this.token.is(TT.EOF)) {
+      throw new SyntaxError(
+        `Unexpected token EOF`,
+        this.token.posStart,
+        this.token.posEnd
+      ).toString();
+    }
+
+    return result;
+  }
+
+  private members(): BaseNode {
+    const statements: BaseNode[] = [];
+    while (!this.token.is(TT.EOF)) {
+      statements.push(this.member());
+    }
+    return new MemberNode(statements);
+  }
+
+  private member(): BaseNode {
+    const token = this.token;
+    if (token.isKeyword(TYPES.fun)) {
+      return this.fun();
+    }
+
+    return this.statement();
+  }
+
+  private fun(): BaseNode {
+    this.matchKeywordToken(TYPES.fun);
+    const returnType = this.token;
+    this.next();
+
+    const name = this.matchToken(TT.IDENTIFIER);
+    const params: FunParam[] = [];
+    this.matchToken(TT.LPAREN);
+    if (this.token.is(TT.RPAREN)) {
+      this.next();
+    } else {
+      const type = this.token;
+      this.next();
+      const name = this.matchToken(TT.IDENTIFIER);
+
+      params.push({
+        type: type.value,
+        name: name.value,
+      });
+
+      while (this.token.is(TT.COMMA)) {
+        this.next();
+        const type = this.token;
+        this.next();
+        const name = this.matchToken(TT.IDENTIFIER);
+        params.push({
+          type: type.value,
+          name: name.value,
+        });
+      }
+
+      this.matchToken(TT.RPAREN);
+    }
+
+    let body: BaseNode = null;
+    if (this.token.is(TT.LBLOCK)) {
+      // block 函数
+      body = this.blockStatement(BlockType.fun);
+    } else if (this.token.is(TT.ARROW)) {
+      // 箭头函数
+      this.next();
+      body = this.expr();
+    }
+    return new FunNode(returnType.value, name, params, body);
+  }
+
+  private statement(): BaseNode {
     const token = this.token;
     if (token.is(TT.LBLOCK)) {
       return this.blockStatement();
@@ -215,7 +280,7 @@ export class Parser {
     }
   }
 
-  private blockStatement(): BaseNode {
+  private blockStatement(type: BlockType = BlockType.default): BaseNode {
     this.matchToken(TT.LBLOCK);
 
     const statements = [];
@@ -223,7 +288,7 @@ export class Parser {
       statements.push(this.statement());
     }
     this.matchToken(TT.RBLOCK);
-    return new BlockNode(statements);
+    return new BlockNode(statements, type);
   }
 
   private variableDeclare(isConst = false): BaseNode {
@@ -383,13 +448,16 @@ export class Parser {
       return new VarAccessNode(token);
     } else if (token.is(TT.LPAREN)) {
       this.next();
+      const t0 = this.peek(0);
+      const t1 = this.peek(1);
       if (
-        this.token.isKeyword(TYPES.bool) ||
-        this.token.isKeyword(TYPES.int) ||
-        this.token.isKeyword(TYPES.float) ||
-        this.token.isKeyword(TYPES.string) ||
-        this.token.isKeyword(TYPES.Null) ||
-        this.token.isKeyword(TYPES.fun)
+        t1.is(TT.RPAREN) &&
+        (t0.isKeyword(TYPES.bool) ||
+          t0.isKeyword(TYPES.int) ||
+          t0.isKeyword(TYPES.float) ||
+          t0.isKeyword(TYPES.string) ||
+          t0.isKeyword(TYPES.Null) ||
+          t0.isKeyword(TYPES.fun))
       ) {
         const conversionType = this.token;
         this.next();

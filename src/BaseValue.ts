@@ -1,6 +1,6 @@
 import { Context, VariableSymbol } from "./Context";
 import { Interpreter } from "./Interpreter";
-import { BaseNode } from "./BaseNode";
+import { BaseNode, FunParam } from "./BaseNode";
 import { TYPES } from "./Token";
 
 export abstract class BaseValue {
@@ -571,7 +571,7 @@ export class StringValue extends BaseValue {
     return new FloatValue(parseFloat(this.value));
   }
   toBool(): BoolValue {
-    return new BoolValue(true);
+    return new BoolValue(!!this.value);
   }
   toString(): string {
     return `"${this.value}"`;
@@ -761,9 +761,9 @@ export abstract class BaseFunctionValue extends BaseValue {
   }
 
   constructor(
+    public returnType: string,
     public name: string,
-    public params: { name: string; type: string }[],
-    public returnType: string
+    public params: FunParam[]
   ) {
     super();
   }
@@ -771,8 +771,10 @@ export abstract class BaseFunctionValue extends BaseValue {
   abstract call(args: BaseValue[], context: Context): BaseValue;
 
   protected checkArgsLength(args: BaseValue[]) {
-    if (args.length !== this.params.length) {
-      throw `The number of parameters is wrong, there should be ${this.params.length} actually ${args.length}`;
+    if (args.length < this.params.length) {
+      throw `Too few parameters in the function call`;
+    } else if (args.length > this.params.length) {
+      throw `Too many parameters in the function call`;
     }
   }
 
@@ -789,12 +791,12 @@ export abstract class BaseFunctionValue extends BaseValue {
 
 export class FunctionValue extends BaseFunctionValue {
   constructor(
-    name: string,
-    params: { name: string; type: string }[],
     returnType: string,
+    name: string,
+    params: FunParam[],
     public body: BaseNode
   ) {
-    super(name, params, returnType);
+    super(returnType, name, params);
   }
   call(args: BaseValue[], context: Context): BaseValue {
     this.checkArgsLength(args);
@@ -814,7 +816,9 @@ export class FunctionValue extends BaseFunctionValue {
     const interpreter = new Interpreter();
     const value: BaseValue = interpreter.visit(this.body, newContext);
     if (value.typeof() !== this.returnType) {
-      throw `Wrong return type`;
+      throw `Wrong return type: There is no conversion from "${value.typeof()}" to "${
+        this.returnType
+      }"`;
     }
     return value;
   }
@@ -822,12 +826,12 @@ export class FunctionValue extends BaseFunctionValue {
 
 export class BuiltInFunction extends BaseFunctionValue {
   constructor(
-    name: string,
-    params: { name: string; type: string }[],
     returnType: string,
+    name: string,
+    params: FunParam[],
     public method: (context: Context, self: BuiltInFunction) => BaseValue
   ) {
-    super(name, params, returnType);
+    super(returnType, name, params);
   }
 
   call(args: BaseValue[], context: Context): BaseValue {
@@ -854,9 +858,9 @@ export class BuiltInFunction extends BaseFunctionValue {
 
   static print() {
     return new BuiltInFunction(
+      TYPES.Null,
       "print",
       [{ name: "input", type: TYPES.auto }],
-      TYPES.Null,
       (context, self: BuiltInFunction) => {
         console.log(context.getVariable("input").value.toString());
         return new NullValue();
@@ -866,36 +870,11 @@ export class BuiltInFunction extends BaseFunctionValue {
 
   static typeof() {
     return new BuiltInFunction(
-      "typeof",
-      [{ name: "data", type: TYPES.auto }],
       TYPES.string,
+      "typeof",
+      [{ type: TYPES.auto, name: "data" }],
       (context, self: BuiltInFunction) => {
         return new StringValue(context.getVariable("data").value.typeof());
-      }
-    );
-  }
-
-  static int() {
-    return new BuiltInFunction(
-      "int",
-      [{ name: "data", type: TYPES.auto }],
-      TYPES.string,
-      (context, self: BuiltInFunction) => {
-        const data: BaseValue = context.getVariable("data").value;
-        if (data instanceof IntValue) {
-          return data;
-        }
-        if (data instanceof FloatValue) {
-          return new IntValue(parseInt(data.toString(), 10));
-        }
-        if (data instanceof BoolValue) {
-          return new IntValue(data.value ? 1 : 0);
-        }
-        if (data instanceof NullValue) {
-          return new IntValue(0);
-        }
-
-        throw ``;
       }
     );
   }

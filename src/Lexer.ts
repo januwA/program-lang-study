@@ -221,6 +221,9 @@ export class Lexer {
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.EE, "==", posStart, this.pos);
+        } else if ((this.c as string) === ">") {
+          this.next();
+          return new Token(TT.ARROW, "=>", posStart, this.pos);
         } else {
           return new Token(TT.EQ, "=", posStart);
         }

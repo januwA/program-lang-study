@@ -3,14 +3,17 @@ import {
   BinaryNode,
   BinNode,
   BlockNode,
+  BlockType,
   BoolNode,
   CallNode,
   DecNode,
   FloatNode,
   ForNode,
+  FunNode,
   HexNode,
   IfNode,
   LabelNode,
+  MemberNode,
   NT,
   OctNode,
   StringNode,
@@ -27,6 +30,7 @@ import {
   BaseValue,
   BoolValue,
   FloatValue,
+  FunctionValue,
   IntValue,
   NullValue,
   StringValue,
@@ -68,6 +72,8 @@ export class Interpreter {
         return this.visitVarAccess(node as VarAccessNode, context);
       case NT.BLOCK:
         return this.visitBlock(node as BlockNode, context);
+      case NT.MEMBER:
+        return this.visitMember(node as MemberNode, context);
       case NT.IF:
         return this.visitIf(node as IfNode, context);
       case NT.WHILE:
@@ -76,16 +82,44 @@ export class Interpreter {
         return this.visitFor(node as ForNode, context);
       case NT.CALL:
         return this.visitCall(node as CallNode, context);
+      case NT.FUN:
+        return this.visitFun(node as FunNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+
+  visitMember(node: MemberNode, context: Context): BaseValue {
+    let result: BaseValue = new NullValue();
+    for (const statement of node.statements) {
+      if (statement instanceof LabelNode) {
+        context.labels.set(statement.label.name, statement.label);
+        continue;
+      }
+      result = this.visit(statement, context);
+    }
+    return result;
+  }
+
+  visitFun(node: FunNode, context: Context): BaseValue {
+    const value = new FunctionValue(
+      node.returnType,
+      node.name.value,
+      node.params,
+      node.body
+    );
+    context.declareVariable(
+      node.name.value,
+      new VariableSymbol(true, TYPES.fun, value)
+    );
+    return new NullValue();
   }
 
   visitCall(node: CallNode, context: Context): BaseValue {
     const funValue: BaseValue = this.visit(node.name, context);
     if (funValue instanceof BaseFunctionValue) {
       return funValue.call(
-        node.args.map((arg) => this.visit(arg, context)),
+        node.args.map((arg) => this.visit(arg, context)), // 值传递
         context
       );
     } else {
@@ -143,6 +177,8 @@ export class Interpreter {
       }
       result = this.visit(statement, newContext);
     }
+
+    if (node.type === BlockType.fun) return new NullValue();
     return result;
   }
 
@@ -195,7 +231,6 @@ export class Interpreter {
       } else if (node.operator.is(TT.NULLISH_EQ)) {
         value = data.value.nullishCoalescing(value);
       }
-      data.value = value;
 
       if (data.type !== TYPES.auto) {
         const valueType: string = value.typeof();
@@ -203,8 +238,7 @@ export class Interpreter {
           throw `The ${valueType} type cannot be assigned to the ${data.type} type`;
         }
       }
-
-      return value;
+      return (data.value = value);
     } else {
       throw `${name} is not defined`;
     }
@@ -228,7 +262,7 @@ export class Interpreter {
         name,
         new VariableSymbol(node.isConst, node.type.value, value)
       );
-      return value;
+      return new NullValue();
     } else {
       // 当前作用域内，不能再次定义
       throw `Identifier '${name}' has already been declared`;

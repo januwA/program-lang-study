@@ -60,6 +60,15 @@ typeof(1.23)  => "float"
 typeof("123") => "string"
 ```
 
+# fun
+```
+fun int add(int a, int b) => a + b
+
+fun Null add(int a, int b) {
+  print(a + b)
+}
+```
+
 # Conversion
 ```
 (int)1.23  => 1

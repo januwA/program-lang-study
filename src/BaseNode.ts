@@ -24,6 +24,8 @@ export enum NT {
   LABEL,
   STRING,
   CALL,
+  FUN,
+  MEMBER,
 }
 
 export abstract class BaseNode {
@@ -227,9 +229,30 @@ export class VarAccessNode extends BaseNode {
   }
 }
 
+export enum BlockType {
+  default,
+  fun,
+}
+
 export class BlockNode extends BaseNode {
   id(): NT {
     return NT.BLOCK;
+  }
+  toString(): string {
+    return `{ ${this.statements
+      .map((it) => it.toString())
+      .reduce((acc, it) => {
+        return acc + it;
+      }, "")} }`;
+  }
+  constructor(public statements: BaseNode[], public type: BlockType) {
+    super();
+  }
+}
+
+export class MemberNode extends BaseNode {
+  id(): NT {
+    return NT.MEMBER;
   }
   toString(): string {
     return `{ ${this.statements
@@ -329,6 +352,30 @@ export class CallNode extends BaseNode {
     return NT.CALL;
   }
   constructor(public name: BaseNode, public args: BaseNode[]) {
+    super();
+  }
+}
+
+export interface FunParam {
+  type: string;
+  name: string;
+}
+
+export class FunNode extends BaseNode {
+  toString(): string {
+    return `fun ${this.returnType} ${this.name.value}(${this.params
+      .map((it) => `${it.type} ${it.name}`)
+      .toString()}) ${this.body.toString()}`;
+  }
+  id(): NT {
+    return NT.FUN;
+  }
+  constructor(
+    public returnType: string,
+    public name: Token,
+    public params: FunParam[],
+    public body: BaseNode
+  ) {
     super();
   }
 }

@@ -7,11 +7,20 @@ const rl = readline.createInterface({
 });
 
 let oldText = "";
+
+process.stdin.on("keypress", (str, key) => {
+  if (key.sequence === "\r") {
+    waitForUserInput();
+  }
+});
+
 const waitForUserInput = function () {
-  const query = oldText ? "... " : "> ";
+  const query = oldText ? ". " : "> ";
   rl.question(query, (text) => {
+    const src: string = oldText + text;
+    if (!src) return;
     try {
-      run(oldText + text);
+      run(src);
       oldText = "";
     } catch (error: any) {
       oldText += text + "\n";
@@ -23,4 +32,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run("(int)1.2");
+// run(`fun Null hello(int a, int b) { print(a + b) }`);
