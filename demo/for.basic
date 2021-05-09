@@ -1,0 +1,36 @@
+for(int i = 0; i < 10; i += 1) {
+  if( i % 2 == 0) {
+    print( "even: " + (string)i )
+  } else {
+    print( "odd: " + (string)i )
+  }
+}
+
+print("===============================")
+
+
+for(int i = 0; i < 10; i += 1) {
+  if(i == 5) break
+
+  if(i % 2 == 0) {
+    print("continue: " + (string)i)
+    continue
+    print(233)
+  }
+
+  print("Test break and continue: " + (string)i)
+}
+
+print("===============================")
+
+for(int i = 0; i < 10; i += 1) {  
+  for(int j = 0; j < 10; j += 1) {  
+    break
+  }
+
+  while(true) if( !(i < 0) ) break
+
+  if(i == 2) break
+
+  print(i)
+}

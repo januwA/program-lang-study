@@ -6,7 +6,9 @@ import {
   BlockNode,
   BlockType,
   BoolNode,
+  BreakNode,
   CallNode,
+  ContinueNode,
   DecNode,
   FloatNode,
   ForNode,
@@ -17,6 +19,7 @@ import {
   MemberNode,
   NullNode,
   OctNode,
+  RetNode,
   StringNode,
   UnaryNode,
   VarAccessNode,
@@ -168,6 +171,14 @@ export class Parser {
     ) {
       return 17;
     }
+
+    if (
+      token.is(TT.LPAREN) &&
+      this.peek(1).is(TT.KEYWORD) &&
+      this.peek(2).is(TT.RPAREN)
+    ) {
+      return 17;
+    }
     return 0;
   }
 
@@ -178,7 +189,7 @@ export class Parser {
   parse(): BaseNode {
     if (this.token.is(TT.EOF)) return new NullNode(this.token);
 
-    const result: BaseNode = this.members();
+    const result: BaseNode = this.globalBlock();
 
     if (!this.token.is(TT.EOF)) {
       throw new SyntaxError(
@@ -191,21 +202,12 @@ export class Parser {
     return result;
   }
 
-  private members(): BaseNode {
+  private globalBlock(): BaseNode {
     const statements: BaseNode[] = [];
     while (!this.token.is(TT.EOF)) {
-      statements.push(this.member());
+      statements.push(this.statement());
     }
     return new MemberNode(statements);
-  }
-
-  private member(): BaseNode {
-    const token = this.token;
-    if (token.isKeyword(TYPES.fun)) {
-      return this.fun();
-    }
-
-    return this.statement();
   }
 
   private fun(): BaseNode {
@@ -271,10 +273,26 @@ export class Parser {
       return this.variableDeclare();
     } else if (token.isKeyword("if")) {
       return this.ifStatement();
+    } else if (token.isKeyword(TYPES.fun)) {
+      return this.fun();
     } else if (token.isKeyword("while")) {
       return this.whileStatement();
     } else if (token.isKeyword("for")) {
       return this.forStatement();
+    } else if (token.isKeyword("ret")) {
+      const retRow = this.token.posStart.row;
+      this.next();
+      let value: BaseNode = null;
+      if (retRow === this.token.posStart.row) {
+        value = this.expr();
+      }
+      return new RetNode(value);
+    } else if (token.isKeyword("continue")) {
+      this.next();
+      return new ContinueNode();
+    } else if (token.isKeyword("break")) {
+      this.next();
+      return new BreakNode();
     } else {
       return this.expr();
     }
@@ -384,9 +402,18 @@ export class Parser {
     const unaryPrecedence = this.getUnaryOperatorPrecedence(this.token);
     if (unaryPrecedence !== 0 && unaryPrecedence >= parentPrecedence) {
       const token = this.token;
-      this.next();
-      const _node: BaseNode = this.binaryExpr(unaryPrecedence);
-      left = new UnaryNode(token, _node);
+      if (token.is(TT.LPAREN)) {
+        this.next();
+        const conversionType = this.token;
+        this.next();
+        this.matchToken(TT.RPAREN);
+        const _node: BaseNode = this.binaryExpr(unaryPrecedence);
+        left = new UnaryNode(conversionType, _node);
+      } else {
+        this.next();
+        const _node: BaseNode = this.binaryExpr(unaryPrecedence);
+        left = new UnaryNode(token, _node);
+      }
     } else {
       const atom = this.primary();
 
@@ -448,26 +475,9 @@ export class Parser {
       return new VarAccessNode(token);
     } else if (token.is(TT.LPAREN)) {
       this.next();
-      const t0 = this.peek(0);
-      const t1 = this.peek(1);
-      if (
-        t1.is(TT.RPAREN) &&
-        (t0.isKeyword(TYPES.bool) ||
-          t0.isKeyword(TYPES.int) ||
-          t0.isKeyword(TYPES.float) ||
-          t0.isKeyword(TYPES.string) ||
-          t0.isKeyword(TYPES.Null) ||
-          t0.isKeyword(TYPES.fun))
-      ) {
-        const conversionType = this.token;
-        this.next();
-        this.matchToken(TT.RPAREN);
-        return new UnaryNode(conversionType, this.expr());
-      } else {
-        const _expr = this.expr();
-        this.matchToken(TT.RPAREN);
-        return _expr;
-      }
+      const _expr = this.expr();
+      this.matchToken(TT.RPAREN);
+      return _expr;
     } else if (token.isKeyword("null")) {
       this.next();
       return new NullNode(token);

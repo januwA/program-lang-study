@@ -17,19 +17,22 @@ globalContext.declareVariable(
   new VariableSymbol(true, TYPES.fun, BuiltInFunction.typeof())
 );
 
-export function run(text: string) {
+export function run(text: string): BaseValue {
   const lexer = new Lexer(text);
-  const tokens: Token[] = lexer.makeTokens().filter((t) => t.type !== TT.SPACE);
+  const tokens: Token[] = lexer
+    .makeTokens()
+    .filter((t) => t.type !== TT.SPACE)
+    .filter((t) => t.type !== TT.COMMENT);
   // console.log(tokens.map((it) => it.toString()));
 
   const parser = new Parser(tokens);
   let ast: BaseNode = parser.parse();
-  // console.log(ast.toString());
+  // console.log( ast.toString() );
 
   const interpreter = new Interpreter();
   try {
     const result: BaseValue = interpreter.visit(ast, globalContext);
-    console.log(result.toString());
+    return result;
   } catch (error) {
     console.log(error);
   }

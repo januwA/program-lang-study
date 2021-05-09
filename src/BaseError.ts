@@ -31,13 +31,13 @@ abstract class BaseError {
  */
 export class SyntaxError extends BaseError {
   constructor(message: string, posStart: Position, posEnd: Position) {
-    super("Uncaught SyntaxError", message, posStart, posEnd);
+    super("SyntaxError", message, posStart, posEnd);
   }
 }
 
 
 export class ReferenceError extends BaseError {
   constructor(message: string, posStart: Position, posEnd: Position) {
-    super("Uncaught ReferenceError", message, posStart, posEnd);
+    super("ReferenceError", message, posStart, posEnd);
   }
 }

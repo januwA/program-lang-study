@@ -1,0 +1,12 @@
+fun Null Test(string text) {
+  fun string hello(string name) => "Hello " + name
+
+  const fun hi = hello
+  print( hi(text) )
+
+  ret
+
+  print(123)
+}
+
+Test("basic")

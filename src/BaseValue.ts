@@ -768,7 +768,11 @@ export abstract class BaseFunctionValue extends BaseValue {
     super();
   }
 
-  abstract call(args: BaseValue[], context: Context): BaseValue;
+  abstract call(
+    args: BaseValue[],
+    context: Context,
+    interpreter: Interpreter
+  ): BaseValue;
 
   protected checkArgsLength(args: BaseValue[]) {
     if (args.length < this.params.length) {
@@ -798,7 +802,11 @@ export class FunctionValue extends BaseFunctionValue {
   ) {
     super(returnType, name, params);
   }
-  call(args: BaseValue[], context: Context): BaseValue {
+  call(
+    args: BaseValue[],
+    context: Context,
+    interpreter: Interpreter
+  ): BaseValue {
     this.checkArgsLength(args);
     this.checkArgsType(args);
 
@@ -813,7 +821,6 @@ export class FunctionValue extends BaseFunctionValue {
       );
     }
 
-    const interpreter = new Interpreter();
     const value: BaseValue = interpreter.visit(this.body, newContext);
     if (value.typeof() !== this.returnType) {
       throw `Wrong return type: There is no conversion from "${value.typeof()}" to "${
@@ -834,7 +841,11 @@ export class BuiltInFunction extends BaseFunctionValue {
     super(returnType, name, params);
   }
 
-  call(args: BaseValue[], context: Context): BaseValue {
+  call(
+    args: BaseValue[],
+    context: Context,
+    interpreter: Interpreter
+  ): BaseValue {
     this.checkArgsLength(args);
     this.checkArgsType(args);
 

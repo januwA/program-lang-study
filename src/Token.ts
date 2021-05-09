@@ -19,6 +19,7 @@ export enum TT {
   QMAKE = "QMAKE", // ?
   COMMA = "COMMA", // ,
   ARROW = "ARROW", // =>
+  COMMENT = "COMMENT", // 注释
 
   // 运算
   PLUS = "PLUS", // +
@@ -76,7 +77,6 @@ export enum TYPES {
   string = "string",
   Null = "Null",
   fun = "fun",
-  ret = "ret",
 }
 
 export const KEYWORD = [
@@ -91,13 +91,19 @@ export const KEYWORD = [
   TYPES.float,
   TYPES.string,
   TYPES.Null,
+
   TYPES.fun,
-  TYPES.ret,
+  "ret",
 
   "if",
+  "elif",
   "else",
+
   "while",
   "for",
+  "continue",
+  "break",
+
   "jmp",
 ];
 

@@ -16,6 +16,7 @@ import {
   MemberNode,
   NT,
   OctNode,
+  RetNode,
   StringNode,
   UnaryNode,
   VarAccessNode,
@@ -40,6 +41,32 @@ import {
  * 解析语法树
  */
 export class Interpreter {
+  // fun
+  private hasCall = false;
+  private inCall() {
+    const canOut = this.hasCall === false;
+    this.hasCall = true;
+
+    return () => {
+      if (canOut) this.hasCall = false;
+    };
+  }
+
+  isRet = false;
+
+  // for, while
+  private hasControlFlow = false;
+  private inControlFlow() {
+    const canOut = this.hasControlFlow === false;
+    this.hasControlFlow = true;
+
+    return () => {
+      if (canOut) this.hasControlFlow = false;
+    };
+  }
+  isContinue = false;
+  isBreak = false;
+
   constructor() {}
 
   visit(node: BaseNode, context: Context): BaseValue {
@@ -84,9 +111,33 @@ export class Interpreter {
         return this.visitCall(node as CallNode, context);
       case NT.FUN:
         return this.visitFun(node as FunNode, context);
+      case NT.RET:
+        return this.visitRet(node as RetNode, context);
+      case NT.CONTINUE: {
+        if (!this.hasControlFlow) {
+          throw `Illegal continue statement`;
+        }
+        this.isContinue = true;
+        return new NullValue();
+      }
+      case NT.BREAK:
+        if (!this.hasControlFlow) {
+          throw `Illegal break statement`;
+        }
+        this.isBreak = true;
+        return new NullValue();
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+
+  visitRet(node: RetNode, context: Context): BaseValue {
+    if (this.hasCall) {
+      this.isRet = true;
+    } else {
+      throw `Illegal return statement`;
+    }
+    return node.value ? this.visit(node.value, context) : new NullValue();
   }
 
   visitMember(node: MemberNode, context: Context): BaseValue {
@@ -116,12 +167,17 @@ export class Interpreter {
   }
 
   visitCall(node: CallNode, context: Context): BaseValue {
+    const outCall = this.inCall();
+
     const funValue: BaseValue = this.visit(node.name, context);
     if (funValue instanceof BaseFunctionValue) {
-      return funValue.call(
+      const value = funValue.call(
         node.args.map((arg) => this.visit(arg, context)), // 值传递
-        context
+        context,
+        this
       );
+      outCall();
+      return value;
     } else {
       throw `${funValue.toString()} is not a function`;
     }
@@ -132,25 +188,51 @@ export class Interpreter {
   }
 
   visitFor(node: ForNode, context: Context): BaseValue {
+    const outControlFlow = this.inControlFlow();
     const newContext = new Context(context);
     let result: BaseValue = new NullValue();
     this.visit(node.init, newContext);
     while (true) {
       const condition: BaseValue = this.visit(node.condition, newContext);
       if (!condition.isTren()) break;
+
       result = this.visit(node.bodyNode, newContext);
+      if (this.isContinue) {
+        this.isContinue = false;
+        this.visit(node.stepNode, newContext);
+        continue;
+      }
+
+      if (this.isBreak) {
+        this.isBreak = false;
+        break;
+      }
+
       this.visit(node.stepNode, newContext);
     }
+
+    outControlFlow();
     return result;
   }
 
   visitWhile(node: WhileNode, context: Context): BaseValue {
+    const outControlFlow = this.inControlFlow();
     let result: BaseValue = new NullValue();
     while (true) {
       const condition: BaseValue = this.visit(node.condition, context);
       if (!condition.isTren()) break;
       result = this.visit(node.bodyNode, context);
+      if (this.isContinue) {
+        this.isContinue = false;
+        continue;
+      }
+
+      if (this.isBreak) {
+        this.isBreak = false;
+        break;
+      }
     }
+    outControlFlow();
     return result;
   }
 
@@ -168,22 +250,34 @@ export class Interpreter {
   }
 
   visitBlock(node: BlockNode, context: Context): BaseValue {
-    let result: BaseValue = new NullValue();
-    const newContext = new Context(context);
-    for (const statement of node.statements) {
-      if (statement instanceof LabelNode) {
-        context.labels.set(statement.label.name, statement.label);
-        continue;
+    if (node.type === BlockType.fun) {
+      for (const statement of node.statements) {
+        const value = this.visit(statement, context);
+        if (this.isRet) {
+          this.isRet = false;
+          return value;
+        }
       }
-      result = this.visit(statement, newContext);
-    }
 
-    if (node.type === BlockType.fun) return new NullValue();
-    return result;
+      return new NullValue();
+    } else {
+      let result: BaseValue = new NullValue();
+      const newContext = new Context(context);
+      for (const statement of node.statements) {
+        result = this.visit(statement, newContext);
+
+        if (this.isContinue) {
+          if (this.hasControlFlow) break;
+          else continue;
+        }
+        if (this.isBreak) break;
+      }
+      return result;
+    }
   }
 
   // 使用变量
-  private visitVarAccess(node: VarAccessNode, context: Context): BaseValue {
+  visitVarAccess(node: VarAccessNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.hasVariable(name)) {
       return context.getVariable(name).value;
@@ -193,7 +287,7 @@ export class Interpreter {
   }
 
   // 赋值变量
-  private visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
+  visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.hasVariable(name)) {
       const data = context.getVariable(name);
@@ -245,7 +339,7 @@ export class Interpreter {
   }
 
   // 定义变量
-  private visitVarDeclare(node: VarDeclareNode, context: Context): BaseValue {
+  visitVarDeclare(node: VarDeclareNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.canDeclareVariable(name)) {
       const value: BaseValue = this.visit(node.value, context);
@@ -269,11 +363,11 @@ export class Interpreter {
     }
   }
 
-  private visitBool(node: BoolNode): BaseValue {
+  visitBool(node: BoolNode): BaseValue {
     return new BoolValue(node.token.value === "true");
   }
 
-  private visitUnary(node: UnaryNode, context: Context) {
+  visitUnary(node: UnaryNode, context: Context) {
     switch (node.token.type) {
       case TT.MINUS:
         return this.visit(node.node, context).mul(new IntValue(-1));
@@ -302,7 +396,7 @@ export class Interpreter {
     }
   }
 
-  private visitBinary(node: BinaryNode, context: Context) {
+  visitBinary(node: BinaryNode, context: Context) {
     const left = this.visit(node.left, context);
     const right = this.visit(node.right, context);
     switch (node.token.type) {
@@ -351,27 +445,27 @@ export class Interpreter {
     }
   }
 
-  private visitNull(): BaseValue {
+  visitNull(): BaseValue {
     return new NullValue();
   }
 
-  private visitFloat(node: FloatNode): BaseValue {
+  visitFloat(node: FloatNode): BaseValue {
     return new FloatValue(node.value);
   }
 
-  private visitBin(node: BinNode): BaseValue {
+  visitBin(node: BinNode): BaseValue {
     return new IntValue(node.value);
   }
 
-  private visitOct(node: OctNode): BaseValue {
+  visitOct(node: OctNode): BaseValue {
     return new IntValue(node.value);
   }
 
-  private visitHex(node: HexNode): BaseValue {
+  visitHex(node: HexNode): BaseValue {
     return new IntValue(node.value);
   }
 
-  private visitDec(node: DecNode): BaseValue {
+  visitDec(node: DecNode): BaseValue {
     return new IntValue(node.value);
   }
 }

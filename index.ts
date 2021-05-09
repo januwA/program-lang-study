@@ -20,11 +20,12 @@ const waitForUserInput = function () {
     const src: string = oldText + text;
     if (!src) return;
     try {
-      run(src);
+      const value = run(src);
       oldText = "";
+      console.log(value.toString());
     } catch (error: any) {
       oldText += text + "\n";
-      // console.log(error);
+      oldText = "";
     }
     waitForUserInput();
   });
@@ -32,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(`fun Null hello(int a, int b) { print(a + b) }`);
+// run(`"asd" + (string)1 + " end"`);

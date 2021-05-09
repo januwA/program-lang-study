@@ -141,6 +141,29 @@ export class Lexer {
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.DIV_EQ, "/=", posStart, this.pos);
+        } else if ((this.c as string) === "/") {
+          this.next();
+          let val = "";
+          while ((this.c as string) !== "\n" && (this.c as string) !== "\r") {
+            val += this.c;
+            this.next();
+          }
+          return new Token(TT.COMMENT, val, posStart, this.pos);
+        } else if ((this.c as string) === "*") {
+          this.next();
+          let val = "";
+          while (true) {
+            if ((this.c as string) === "*") {
+              this.next();
+              if ((this.c as string) === "/") {
+                this.next();
+                break;
+              }
+            }
+            val += this.c;
+            this.next();
+          }
+          return new Token(TT.COMMENT, val, posStart, this.pos);
         } else {
           return new Token(TT.DIV, "/", posStart);
         }
@@ -277,6 +300,7 @@ export class Lexer {
         ).toString();
     }
   }
+
   makeString(c: string): Token {
     const posStart = this.pos.copy();
     let val = "";

@@ -26,6 +26,9 @@ export enum NT {
   CALL,
   FUN,
   MEMBER,
+  RET,
+  CONTINUE,
+  BREAK
 }
 
 export abstract class BaseNode {
@@ -376,6 +379,45 @@ export class FunNode extends BaseNode {
     public params: FunParam[],
     public body: BaseNode
   ) {
+    super();
+  }
+}
+
+export class RetNode extends BaseNode {
+  toString(): string {
+    return `ret ${this.value.toString()}`;
+  }
+  id(): NT {
+    return NT.RET;
+  }
+
+  constructor(public value?: BaseNode) {
+    super();
+  }
+}
+
+export class ContinueNode extends BaseNode {
+  toString(): string {
+    return `continue`;
+  }
+  id(): NT {
+    return NT.CONTINUE;
+  }
+
+  constructor() {
+    super();
+  }
+}
+
+export class BreakNode extends BaseNode {
+  toString(): string {
+    return `break`;
+  }
+  id(): NT {
+    return NT.BREAK;
+  }
+
+  constructor() {
     super();
   }
 }

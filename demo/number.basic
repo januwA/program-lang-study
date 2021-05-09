@@ -1,0 +1,43 @@
+fun Null assert(auto a, auto b) {
+  if(a != b) print( "Access Error: " + (string)a + " != " + (string)b )
+}
+
+// hex
+const int n1 = 0xc8
+const int n2 = 0hc8
+const int n3 = 0c8h
+assert(n1, 200)
+assert(n2, 200)
+assert(n3, 200)
+
+// dec
+const int n4 = 0d200
+const int n5 = 200
+const int n6 = 0200d
+assert(n4, 200)
+assert(n5, 200)
+assert(n6, 200)
+
+// oct
+const int n7 = 0o310
+const int n8 = 0q310
+const int n9 = 310q
+const int n10 = 310o
+assert(n7, 200)
+assert(n8, 200)
+assert(n9, 200)
+assert(n10, 200)
+
+/* 
+* bin 
+*/
+const int n11 = 0b1100_1000
+const int n12 = 0y1100_1000
+const int n13 = 11001000b
+const int n14 = 1100_1000b
+const int n15 = 1100_1000y
+assert(n11, 200)
+assert(n12, 200)
+assert(n13, 200)
+assert(n14, 200)
+assert(n15, 200)
