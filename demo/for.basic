@@ -1,12 +1,12 @@
 for(int i = 0; i < 10; i += 1) {
   if( i % 2 == 0) {
-    print( "even: " + (string)i )
+    print( "even: " + (string)i );
   } else {
-    print( "odd: " + (string)i )
+    print( "odd: " + (string)i );
   }
-}
+};
 
-print("===============================")
+print("===============================");
 
 
 for(int i = 0; i < 10; i += 1) {

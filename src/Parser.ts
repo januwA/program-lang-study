@@ -256,49 +256,72 @@ export class Parser {
   }
 
   private statement(): BaseNode {
+    let result: BaseNode = null;
     const token = this.token;
     if (token.is(TT.LBLOCK)) {
-      return this.blockStatement();
+      result = this.blockStatement();
     } else if (token.isKeyword("const")) {
       this.next();
-      return this.variableDeclare(true);
+      result = this.variableDeclare(true);
     } else if (token.isKeyword("if")) {
-      return this.ifStatement();
+      result = this.ifStatement();
     } else if (token.isKeyword("while")) {
-      return this.whileStatement();
+      result = this.whileStatement();
     } else if (token.isKeyword("for")) {
-      return this.forStatement();
+      result = this.forStatement();
     } else if (token.isKeyword("ret")) {
-      const retRow = this.token.posStart.row;
-      this.next();
-      let value: BaseNode = null;
-      if (retRow === this.token.posStart.row) {
-        value = this.expr();
-      }
-      return new RetNode(value);
+      result = this.retStatement();
     } else if (token.isKeyword("continue")) {
-      this.next();
-      return new ContinueNode();
+      result = this.continueStatement();
     } else if (token.isKeyword("break")) {
-      this.next();
-      return new BreakNode();
+      result = this.breakStatement();
     } else if (token.is(TT.KEYWORD) || token.is(TT.IDENTIFIER)) {
       // int a = 1
       // int add() => 1
       if (this.peek(1).is(TT.IDENTIFIER)) {
         if (this.peek(2).is(TT.EQ)) {
-          return this.variableDeclare();
+          result = this.variableDeclare();
         } else if (this.peek(2).is(TT.LPAREN)) {
-          return this.fun();
+          result = this.fun();
         } else {
-          return this.expr();
+          result = this.expr();
         }
       } else {
-        return this.expr();
+        result = this.expr();
       }
     } else {
-      return this.expr();
+      result = this.expr();
     }
+
+    while (this.token.is(TT.SEMICOLON)) {
+      this.next();
+    }
+
+    return result;
+  }
+
+  private retStatement() {
+    const retRow = this.token.posStart.row;
+    this.matchKeywordToken("ret");
+    const valueToken = this.token;
+    let value: BaseNode = null;
+
+    // ret 1
+    
+    // ret
+    // 1
+    if (retRow === valueToken.posStart.row) value = this.expr();
+    return new RetNode(value);
+  }
+
+  private continueStatement() {
+    this.matchKeywordToken("continue");
+    return new ContinueNode();
+  }
+
+  private breakStatement() {
+    this.matchKeywordToken("break");
+    return new BreakNode();
   }
 
   private blockStatement(type: BlockType = BlockType.default): BaseNode {
@@ -372,7 +395,7 @@ export class Parser {
   private forStatement(): BaseNode {
     this.matchKeywordToken("for");
     this.matchToken(TT.LPAREN);
-    const init = this.statement();
+    const init = this.variableDeclare();
     this.matchToken(TT.SEMICOLON);
 
     const condition = this.expr();
