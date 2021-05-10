@@ -145,7 +145,11 @@ export class Lexer {
         } else if ((this.c as string) === "/") {
           this.next();
           let val = "";
-          while ((this.c as string) !== "\n" && (this.c as string) !== "\r") {
+          while (
+            (this.c as string) !== "\n" &&
+            (this.c as string) !== "\r" &&
+            (this.c as string) !== "\0"
+          ) {
             val += this.c;
             this.next();
           }

@@ -10,3 +10,13 @@ Null Test(string text) {
 }
 
 Test("basic")
+
+
+fun f1(int a) {
+  int add(int b) => a + b;
+  a += 1;
+  ret add;
+}
+
+fun add = f1(1)
+print( add(2) ); // 4

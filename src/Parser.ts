@@ -184,14 +184,10 @@ export class Parser {
     return 0;
   }
 
-  private expr(): BaseNode {
-    return this.variableAssign();
-  }
-
   parse(): BaseNode {
     if (this.token.is(TT.EOF)) return new NullNode(this.token);
 
-    const result: BaseNode = this.globalBlock();
+    const result: BaseNode = this.member();
 
     if (!this.token.is(TT.EOF)) {
       throw new SyntaxError(
@@ -204,7 +200,7 @@ export class Parser {
     return result;
   }
 
-  private globalBlock(): BaseNode {
+  private member(): BaseNode {
     const statements: BaseNode[] = [];
     while (!this.token.is(TT.EOF)) {
       statements.push(this.statement());
@@ -212,60 +208,15 @@ export class Parser {
     return new MemberNode(statements);
   }
 
-  private fun(): BaseNode {
-    const returnType = this.token;
-    this.next();
-
-    const name = this.matchToken(TT.IDENTIFIER);
-    const params: FunParam[] = [];
-    this.matchToken(TT.LPAREN);
-    if (this.token.is(TT.RPAREN)) {
-      this.next();
-    } else {
-      const type = this.token;
-      this.next();
-      const name = this.matchToken(TT.IDENTIFIER);
-
-      params.push({
-        type: type.value,
-        name: name.value,
-      });
-
-      while (this.token.is(TT.COMMA)) {
-        this.next();
-        const type = this.token;
-        this.next();
-        const name = this.matchToken(TT.IDENTIFIER);
-        params.push({
-          type: type.value,
-          name: name.value,
-        });
-      }
-
-      this.matchToken(TT.RPAREN);
-    }
-
-    let body: BaseNode = null;
-    if (this.token.is(TT.LBLOCK)) {
-      // block 函数
-      body = this.blockStatement(BlockType.fun);
-    } else if (this.token.is(TT.ARROW)) {
-      // 箭头函数
-      this.next();
-      body = this.expr();
-    }
-    return new FunNode(returnType.value, name, params, body);
-  }
-
   private statement(): BaseNode {
     let result: BaseNode = null;
     const token = this.token;
     if (token.is(TT.LBLOCK)) {
-      result = this.blockStatement();
+      result = this.block();
     } else if (token.is(TT.KEYWORD)) {
       if (token.value === Keyword.const) {
         this.next();
-        result = this.variableDeclare(true);
+        result = this.varDeclare(true);
       } else if (token.value === Keyword.if) {
         result = this.ifStatement();
       } else if (token.value === Keyword.while) {
@@ -288,18 +239,18 @@ export class Parser {
 
       const t: Token | null = this.peek(2);
       if (!t) {
-        result = this.expr();
+        result = this.varAssign();
       } else {
         if (t.is(TT.EQ)) {
-          result = this.variableDeclare();
+          result = this.varDeclare();
         } else if (t.is(TT.LPAREN)) {
           result = this.fun();
         } else {
-          result = this.expr();
+          result = this.varAssign();
         }
       }
     } else {
-      result = this.expr();
+      result = this.varAssign();
     }
 
     while (this.token.is(TT.SEMICOLON)) {
@@ -309,9 +260,50 @@ export class Parser {
     return result;
   }
 
+  private fun(): BaseNode {
+    const retType = this.matchToken(TT.IDENTIFIER);
+    const name = this.matchToken(TT.IDENTIFIER);
+    const params: FunParam[] = [];
+    this.matchToken(TT.LPAREN);
+    if (this.token.is(TT.RPAREN)) {
+      this.next();
+    } else {
+      const type = this.matchToken(TT.IDENTIFIER);
+      const name = this.matchToken(TT.IDENTIFIER);
+
+      params.push({
+        type: type.value,
+        name: name.value,
+      });
+
+      while (this.token.is(TT.COMMA)) {
+        this.next();
+        const type = this.matchToken(TT.IDENTIFIER);
+        const name = this.matchToken(TT.IDENTIFIER);
+        params.push({
+          type: type.value,
+          name: name.value,
+        });
+      }
+
+      this.matchToken(TT.RPAREN);
+    }
+
+    let body: BaseNode = null;
+    if (this.token.is(TT.LBLOCK)) {
+      // block 函数
+      body = this.block(BlockType.fun);
+    } else if (this.token.is(TT.ARROW)) {
+      // 箭头函数
+      this.next();
+      body = this.varAssign();
+    }
+    return new FunNode(retType.value, name, params, body);
+  }
+
   private retStatement() {
     const retRow = this.token.posStart.row;
-    this.matchKeywordToken("ret");
+    this.matchKeywordToken(Keyword.ret);
     const valueToken = this.token;
     let value: BaseNode = null;
 
@@ -319,21 +311,21 @@ export class Parser {
 
     // ret
     // 1
-    if (retRow === valueToken.posStart.row) value = this.expr();
+    if (retRow === valueToken.posStart.row) value = this.varAssign();
     return new RetNode(value);
   }
 
   private continueStatement() {
-    this.matchKeywordToken("continue");
+    this.matchKeywordToken(Keyword.continue);
     return new ContinueNode();
   }
 
   private breakStatement() {
-    this.matchKeywordToken("break");
+    this.matchKeywordToken(Keyword.break);
     return new BreakNode();
   }
 
-  private blockStatement(type: BlockType = BlockType.default): BaseNode {
+  private block(type: BlockType = BlockType.default): BaseNode {
     this.matchToken(TT.LBLOCK);
 
     const statements = [];
@@ -344,16 +336,16 @@ export class Parser {
     return new BlockNode(statements, type);
   }
 
-  private variableDeclare(isConst = false): BaseNode {
+  private varDeclare(isConst = false): BaseNode {
     // auto a = 1
     const type = this.matchToken(TT.IDENTIFIER);
     const name = this.matchToken(TT.IDENTIFIER);
     this.matchToken(TT.EQ);
-    const value = this.expr();
+    const value = this.varAssign();
     return new VarDeclareNode(isConst, type, name, value);
   }
 
-  private variableAssign(): BaseNode {
+  private varAssign(): BaseNode {
     // a = 1
     const name = this.token;
     if (name.is(TT.IDENTIFIER)) {
@@ -378,7 +370,7 @@ export class Parser {
         this.next();
         const operator = this.token;
         this.next();
-        const value = this.expr();
+        const value = this.varAssign();
         return new VarAssignNode(name, operator, value);
       } else {
         return this.binaryExpr();
@@ -392,7 +384,7 @@ export class Parser {
     this.matchKeywordToken(Keyword.while);
 
     this.matchToken(TT.LPAREN);
-    const condition = this.expr();
+    const condition = this.varAssign();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -402,13 +394,13 @@ export class Parser {
   private forStatement(): BaseNode {
     this.matchKeywordToken(Keyword.for);
     this.matchToken(TT.LPAREN);
-    const init = this.variableDeclare();
+    const init = this.varDeclare();
     this.matchToken(TT.SEMICOLON);
 
-    const condition = this.expr();
+    const condition = this.varAssign();
     this.matchToken(TT.SEMICOLON);
 
-    const step = this.expr();
+    const step = this.varAssign();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -419,7 +411,7 @@ export class Parser {
     this.matchKeywordToken(Keyword.if);
 
     this.matchToken(TT.LPAREN);
-    const condition = this.expr();
+    const condition = this.varAssign();
     this.matchToken(TT.RPAREN);
 
     const thenNode = this.statement();
@@ -436,38 +428,13 @@ export class Parser {
 
     const unaryPrecedence = this.getUnaryOperatorPrecedence(this.token);
     if (unaryPrecedence !== 0 && unaryPrecedence >= parentPrecedence) {
-      const token = this.token;
-      if (token.is(TT.LPAREN)) {
-        this.next();
-        const conversionType = this.token;
-        this.next();
-        this.matchToken(TT.RPAREN);
-        const _node: BaseNode = this.binaryExpr(unaryPrecedence);
-        left = new UnaryNode(conversionType, _node);
-      } else {
-        this.next();
-        const _node: BaseNode = this.binaryExpr(unaryPrecedence);
-        left = new UnaryNode(token, _node);
-      }
+      left = this.unaryExpr(unaryPrecedence);
     } else {
-      const atom = this.primary();
+      const atom = this.atom();
 
-      // call
+      // a()
       if (this.token.is(TT.LPAREN)) {
-        this.next();
-        const args: BaseNode[] = [];
-        if (this.token.is(TT.RPAREN)) {
-          this.next();
-        } else {
-          args.push(this.binaryExpr());
-          while (this.token.is(TT.COMMA)) {
-            this.next();
-            args.push(this.binaryExpr());
-          }
-          this.matchToken(TT.RPAREN);
-        }
-
-        left = new CallNode(atom, args);
+        left = this.call(atom);
       } else {
         left = atom;
       }
@@ -477,15 +444,47 @@ export class Parser {
       const precedence = this.getBinaryOperatorPrecedence(this.token);
       if (precedence === 0 || precedence <= parentPrecedence) break;
 
-      const t = this.token;
+      const operator = this.token;
       this.next();
       const right = this.binaryExpr(precedence);
-      left = new BinaryNode(left, t, right);
+      left = new BinaryNode(left, operator, right);
     }
     return left;
   }
 
-  private primary(): BaseNode {
+  private call(atom: BaseNode) {
+    this.matchToken(TT.LPAREN);
+    const args: BaseNode[] = [];
+    if (this.token.is(TT.RPAREN)) {
+      this.next();
+    } else {
+      args.push(this.binaryExpr());
+      while (this.token.is(TT.COMMA)) {
+        this.next();
+        args.push(this.binaryExpr());
+      }
+      this.matchToken(TT.RPAREN);
+    }
+
+    return new CallNode(atom, args);
+  }
+
+  private unaryExpr(unaryPrecedence): BaseNode {
+    const token = this.token;
+    if (token.is(TT.LPAREN)) {
+      this.matchToken(TT.LPAREN);
+      const conversionType = this.matchToken(TT.IDENTIFIER);
+      this.matchToken(TT.RPAREN);
+      const _node: BaseNode = this.binaryExpr(unaryPrecedence);
+      return new UnaryNode(conversionType, _node);
+    } else {
+      this.next();
+      const _node: BaseNode = this.binaryExpr(unaryPrecedence);
+      return new UnaryNode(token, _node);
+    }
+  }
+
+  private atom(): BaseNode {
     const token = this.token;
     if (token.is(TT.DEC)) {
       this.next();
@@ -518,11 +517,11 @@ export class Parser {
           this.next();
           return new BoolNode(token);
         default:
-          throw `Wrong keyword ${token.value}`
+          throw `Wrong keyword ${token.value}`;
       }
     } else if (token.is(TT.LPAREN)) {
       this.next();
-      const _expr = this.expr();
+      const _expr = this.varAssign();
       this.matchToken(TT.RPAREN);
       return _expr;
     } else {

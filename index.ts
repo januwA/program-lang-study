@@ -33,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(` while(true) if( !(i < 0) ) break `);
+// run(` print( f1(1)(2) ) `);

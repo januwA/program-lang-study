@@ -688,7 +688,7 @@ export abstract class BaseFunctionValue extends BaseValue {
       .toString()}) {}`;
   }
   typeof(): string {
-    return "fun";
+    return BaseTypes.fun;
   }
   not(): BoolValue {
     throw new Error("Method not implemented.");
@@ -763,16 +763,13 @@ export abstract class BaseFunctionValue extends BaseValue {
   constructor(
     public returnType: string,
     public name: string,
-    public params: FunParam[]
+    public params: FunParam[],
+    public context: Context
   ) {
     super();
   }
 
-  abstract call(
-    args: BaseValue[],
-    context: Context,
-    interpreter: Interpreter
-  ): BaseValue;
+  abstract call(args: BaseValue[], interpreter: Interpreter): BaseValue;
 
   protected checkArgsLength(args: BaseValue[]) {
     if (args.length < this.params.length) {
@@ -798,19 +795,16 @@ export class FunctionValue extends BaseFunctionValue {
     returnType: string,
     name: string,
     params: FunParam[],
-    public body: BaseNode
+    public body: BaseNode,
+    context: Context
   ) {
-    super(returnType, name, params);
+    super(returnType, name, params, context);
   }
-  call(
-    args: BaseValue[],
-    context: Context,
-    interpreter: Interpreter
-  ): BaseValue {
+  call(args: BaseValue[], interpreter: Interpreter): BaseValue {
     this.checkArgsLength(args);
     this.checkArgsType(args);
 
-    const newContext = new Context(context);
+    const newContext = new Context(this.context);
 
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
@@ -836,20 +830,17 @@ export class BuiltInFunction extends BaseFunctionValue {
     returnType: string,
     name: string,
     params: FunParam[],
-    public method: (context: Context, self: BuiltInFunction) => BaseValue
+    public method: (context: Context, self: BuiltInFunction) => BaseValue,
+    context: Context
   ) {
-    super(returnType, name, params);
+    super(returnType, name, params, context);
   }
 
-  call(
-    args: BaseValue[],
-    context: Context,
-    interpreter: Interpreter
-  ): BaseValue {
+  call(args: BaseValue[], interpreter: Interpreter): BaseValue {
     this.checkArgsLength(args);
     this.checkArgsType(args);
 
-    const newContext = new Context(context);
+    const newContext = new Context(this.context);
 
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
@@ -867,7 +858,7 @@ export class BuiltInFunction extends BaseFunctionValue {
     return value;
   }
 
-  static print() {
+  static print(context: Context) {
     return new BuiltInFunction(
       BaseTypes.Null,
       "print",
@@ -875,18 +866,20 @@ export class BuiltInFunction extends BaseFunctionValue {
       (context, self: BuiltInFunction) => {
         console.log(context.getVariable("input").value.toString());
         return new NullValue();
-      }
+      },
+      context
     );
   }
 
-  static typeof() {
+  static typeof(context: Context) {
     return new BuiltInFunction(
       BaseTypes.string,
       "typeof",
       [{ type: BaseTypes.auto, name: "data" }],
       (context, self: BuiltInFunction) => {
         return new StringValue(context.getVariable("data").value.typeof());
-      }
+      },
+      context
     );
   }
 }

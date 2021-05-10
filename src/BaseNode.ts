@@ -112,12 +112,12 @@ export class BinaryNode extends BaseNode {
   }
   toString(): string {
     return `(${this.left.toString()} ${
-      this.token.value
+      this.operator.value
     } ${this.right.toString()})`;
   }
   constructor(
     public left: BaseNode,
-    public token: Token,
+    public operator: Token,
     public right: BaseNode
   ) {
     super();
@@ -366,7 +366,7 @@ export interface FunParam {
 
 export class FunNode extends BaseNode {
   toString(): string {
-    return `fun ${this.returnType} ${this.name.value}(${this.params
+    return `${this.returnType} ${this.name.value}(${this.params
       .map((it) => `${it.type} ${it.name}`)
       .toString()}) ${this.body.toString()}`;
   }

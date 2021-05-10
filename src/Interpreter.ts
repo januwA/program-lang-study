@@ -153,7 +153,8 @@ export class Interpreter {
       node.returnType,
       node.name.value,
       node.params,
-      node.body
+      node.body,
+      context
     );
     context.declareVariable(
       node.name.value,
@@ -169,7 +170,6 @@ export class Interpreter {
     if (funValue instanceof BaseFunctionValue) {
       const value = funValue.call(
         node.args.map((arg) => this.visit(arg, context)), // 值传递
-        context,
         this
       );
       outCall();
@@ -385,7 +385,7 @@ export class Interpreter {
           case BaseTypes.bool:
             return this.visit(node.node, context).toBool();
           default:
-            throw `Type conversion failed ${node.token.value}`
+            throw `Type conversion failed ${node.token.value}`;
         }
       }
       default:
@@ -396,7 +396,7 @@ export class Interpreter {
   visitBinary(node: BinaryNode, context: Context) {
     const left = this.visit(node.left, context);
     const right = this.visit(node.right, context);
-    switch (node.token.type) {
+    switch (node.operator.type) {
       case TT.PLUS:
         return left.add(right);
       case TT.MINUS:

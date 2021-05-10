@@ -1,0 +1,49 @@
+member      : (statement)*
+
+
+statement   : (block|varDeclare|if|while|for|ret|continue|break) (SEMICOLON)*
+            : (varAssign|fun) (SEMICOLON)*
+
+
+block       : LBLOCK (statement)* RBLOCK
+
+
+varDeclare  : const? IDENTIFIER IDENTIFIER EQ varAssign
+
+
+if          : if LPAREN varAssign RPAREN statement
+            : (else statement)?
+
+
+while       : while LPAREN varAssign RPAREN statement
+
+
+for         : for LPAREN varDeclare SEMICOLON varAssign SEMICOLON varAssign RPAREN statement
+
+ret         : ret (varAssign)?
+
+
+continue    : continue
+
+
+break       : break
+
+
+fun         : IDENTIFIER IDENTIFIER LPAREN ( IDENTIFIER IDENTIFIER (COMMA IDENTIFIER IDENTIFIER)* )? RPAREN (block|ARROW varAssign)
+
+
+varAssign   : IDENTIFIER (EQ|operator_EQ) varAssign
+            : binaryExpr
+
+binaryExpr  : (unaryExpr|call) (operator binaryExpr)*
+
+
+unaryExpr   : (NOT|PLUS|MINUS|BNOT) binaryExpr
+            : LPAREN IDENTIFIER RPAREN binaryExpr
+
+
+call        : atom (LPAREN (binaryExpr (COMMA binaryExpr)* )? RPAREN)?
+
+
+atom        : DEC|HEX|OCT|BIN|FLOAT|STRING|IDENTIFIER|null|true|false
+            : LPAREN variableAssign RPAREN
