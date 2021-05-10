@@ -381,17 +381,35 @@ export class Parser {
   private ifStatement(): BaseNode {
     this.matchKeywordToken(Keyword.if);
 
+    const cases: { condition: BaseNode; then: BaseNode }[] = [];
+
     this.matchToken(TT.LPAREN);
     const condition = this.varAssign();
     this.matchToken(TT.RPAREN);
-
     const thenNode = this.statement();
+    cases.push({
+      condition: condition,
+      then: thenNode,
+    });
+
+    while (this.token.value === Keyword.elif) {
+      this.next();
+      this.matchToken(TT.LPAREN);
+      const condition = this.varAssign();
+      this.matchToken(TT.RPAREN);
+      const thenNode = this.statement();
+      cases.push({
+        condition: condition,
+        then: thenNode,
+      });
+    }
+
     let elseNode = null;
     if (this.token.value === Keyword.else) {
       this.next();
       elseNode = this.statement();
     }
-    return new IfNode(condition, thenNode, elseNode);
+    return new IfNode(cases, elseNode);
   }
 
   private varAssign(): BaseNode {
@@ -517,7 +535,7 @@ export class Parser {
       this.next();
       const nodes: BaseNode[] = [];
       while (!this.token.is(TT.RSPAN)) {
-        nodes.push( this.varAssign() );
+        nodes.push(this.varAssign());
       }
       this.next();
       return new TextSpanNode(nodes);

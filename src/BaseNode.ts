@@ -256,6 +256,7 @@ export class VarAccessNode extends BaseNode {
 export enum BlockType {
   default,
   fun,
+  controlFlow,
 }
 
 export class BlockNode extends BaseNode {
@@ -269,7 +270,7 @@ export class BlockNode extends BaseNode {
         return acc + it;
       }, "")} }`;
   }
-  constructor(public statements: BaseNode[], public type: BlockType) {
+  constructor(public statements: BaseNode[], public blockType: BlockType) {
     super();
   }
 }
@@ -295,7 +296,14 @@ export class IfNode extends BaseNode {
     return NT.IF;
   }
   toString(): string {
-    let str = `if (${this.condition.toString()}) ${this.thenNode.toString()}`;
+    let str = ``;
+
+    for (let i = 0; i < this.cases.length; i++) {
+      const it = this.cases[i];
+      str += `${
+        i === 0 ? "if" : "elif"
+      } (${it.condition.toString()}) ${it.then.toString()}`;
+    }
 
     if (this.elseNode) {
       str += " else " + this.elseNode.toString();
@@ -303,8 +311,7 @@ export class IfNode extends BaseNode {
     return str;
   }
   constructor(
-    public condition: BaseNode,
-    public thenNode: BaseNode,
+    public cases: { condition: BaseNode; then: BaseNode }[],
     public elseNode?: BaseNode
   ) {
     super();

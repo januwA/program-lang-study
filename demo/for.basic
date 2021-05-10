@@ -34,3 +34,24 @@ for(int i = 0; i < 10; i += 1) {
 
   print(i)
 }
+
+print("===============================")
+
+
+int age = 111;
+if( age == 10 ) {
+  print(1)
+} elif ( age == 11) {
+  print(2)
+} elif ( age == 12) {
+  print(3)
+} else {
+  print(4)
+}
+
+print("===============================")
+
+                             for (int i = 0; i < 3; i += 1) 
+
+
+print(i);

@@ -133,12 +133,13 @@ export class Interpreter {
         throw `Runtime Error: Unrecognized node ${node}`;
     }
   }
+
   visitTextSpan(node: TextSpanNode, context: Context): BaseValue {
-    let result: BaseValue = new StringValue("");
+    let result: string = "";
     for (const it of node.nodes) {
-      result = result.add(this.visit(it, context).toStr());
+      result += this.visit(it, context).toStr().value;
     }
-    return result;
+    return new StringValue(result);
   }
 
   visitRet(node: RetNode, context: Context): BaseValue {
@@ -194,18 +195,19 @@ export class Interpreter {
   }
 
   visitFor(node: ForNode, context: Context): BaseValue {
-    const outControlFlow = this.inControlFlow();
-    const newContext = new Context(context);
     let result: BaseValue = new NullValue();
-    this.visit(node.init, newContext);
+    context = new Context(context);
+    this.visit(node.init, context);
+    
+    const outControlFlow = this.inControlFlow();
     while (true) {
-      const condition: BaseValue = this.visit(node.condition, newContext);
+      const condition: BaseValue = this.visit(node.condition, context);
       if (!condition.isTren()) break;
 
-      result = this.visit(node.bodyNode, newContext);
+      result = this.visit(node.bodyNode, context);
       if (this.isContinue) {
         this.isContinue = false;
-        this.visit(node.stepNode, newContext);
+        this.visit(node.stepNode, context);
         continue;
       }
 
@@ -214,7 +216,7 @@ export class Interpreter {
         break;
       }
 
-      this.visit(node.stepNode, newContext);
+      this.visit(node.stepNode, context);
     }
 
     outControlFlow();
@@ -243,20 +245,22 @@ export class Interpreter {
   }
 
   visitIf(node: IfNode, context: Context): BaseValue {
-    const condition: BaseValue = this.visit(node.condition, context);
-    if (condition.isTren()) {
-      return this.visit(node.thenNode, context);
-    } else {
-      if (node.elseNode) {
-        return this.visit(node.elseNode, context);
-      } else {
-        return new NullValue();
+    for (const it of node.cases) {
+      const condition: BaseValue = this.visit(it.condition, context);
+      if (condition.isTren()) {
+        return this.visit(it.then, context);
       }
+    }
+
+    if (node.elseNode) {
+      return this.visit(node.elseNode, context);
+    } else {
+      return new NullValue();
     }
   }
 
   visitBlock(node: BlockNode, context: Context): BaseValue {
-    if (node.type === BlockType.fun) {
+    if (node.blockType === BlockType.fun) {
       for (const statement of node.statements) {
         const value = this.visit(statement, context);
         if (this.isRet) {
