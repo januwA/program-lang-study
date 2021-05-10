@@ -7,6 +7,12 @@ const DEC_EXP = /[\d\.]/;
 const NUMBER_EXP = /[a-f\d\._]/i;
 const IDENT_EXP = /\w/; // [A-Za-z0-9_]
 
+const escapeCaracters = {
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
 /**
  * 将源码字符串解析为Token表
  */
@@ -26,7 +32,11 @@ export class Lexer {
   makeTokens(): Token[] {
     const tokens: Token[] = [];
     while (this.c !== "\0") {
-      tokens.push(this.nextToken());
+      if (this.c === "$") {
+        this.makeTextSpan(tokens);
+      } else {
+        tokens.push(this.nextToken());
+      }
     }
     tokens.push(new Token(TT.EOF, "EOF", this.pos));
     return tokens;
@@ -306,15 +316,77 @@ export class Lexer {
     }
   }
 
+  makeTextSpan(tokens: Token[]) {
+    let posStart = this.pos.copy();
+    tokens.push(new Token(TT.LSPAN, "LSPAN", this.pos));
+
+    this.next();
+    const c = this.c;
+    if (c !== '"' && c !== "'") {
+      throw "";
+    }
+
+    this.next();
+
+    let val = "";
+    let escapeCharacter = false;
+
+    while (true) {
+      if ((this.c as string) === "\0") {
+        throw "";
+      }
+
+      if (escapeCharacter) {
+        val += escapeCaracters[this.c] || this.c;
+        escapeCharacter = false;
+        this.next();
+      }
+
+      if (this.c === "\\") {
+        escapeCharacter = true;
+        this.next();
+        continue;
+      } else {
+        escapeCharacter = false;
+      }
+
+      if (this.c === "{") {
+        tokens.push(new Token(TT.STRING, val, posStart, this.pos));
+        val = "";
+        this.next();
+
+        while ((this.c as string) !== "}") {
+          if ((this.c as string) === "\0") {
+            throw "";
+          }
+
+          tokens.push(this.nextToken());
+        }
+
+        this.next();
+        posStart = this.pos.copy();
+      }
+
+      if (this.c === c) {
+        if (val) {
+          tokens.push(new Token(TT.STRING, val, posStart, this.pos));
+        }
+        break;
+      }
+
+      val += this.c;
+      this.next();
+    }
+
+    tokens.push(new Token(TT.RSPAN, "RSPAN", this.pos));
+    this.next();
+  }
+
   makeString(c: string): Token {
     const posStart = this.pos.copy();
     let val = "";
     let escapeCharacter = false;
-    const escapeCaracters = {
-      n: "\n",
-      r: "\r",
-      t: "\t",
-    };
+
     this.next();
     while (this.c !== c || escapeCharacter) {
       if (escapeCharacter) {

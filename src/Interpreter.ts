@@ -17,6 +17,7 @@ import {
   OctNode,
   RetNode,
   StringNode,
+  TextSpanNode,
   UnaryNode,
   VarAccessNode,
   VarAssignNode,
@@ -83,6 +84,8 @@ export class Interpreter {
         return this.visitFloat(node as FloatNode);
       case NT.STRING:
         return this.visitString(node as StringNode);
+      case NT.TEXT_SPAN:
+        return this.visitTextSpan(node as TextSpanNode, context);
       case NT.NULL:
         return this.visitNull();
       case NT.BOOL:
@@ -129,6 +132,13 @@ export class Interpreter {
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+  visitTextSpan(node: TextSpanNode, context: Context): BaseValue {
+    let result: BaseValue = new StringValue("");
+    for (const it of node.nodes) {
+      result = result.add(this.visit(it, context).toStr());
+    }
+    return result;
   }
 
   visitRet(node: RetNode, context: Context): BaseValue {

@@ -21,6 +21,7 @@ import {
   OctNode,
   RetNode,
   StringNode,
+  TextSpanNode,
   UnaryNode,
   VarAccessNode,
   VarAssignNode,
@@ -350,44 +351,6 @@ export class Parser {
     return new VarDeclareNode(isConst, type, name, value);
   }
 
-  private varAssign(): BaseNode {
-    // a = 1
-    // a += 1
-    const name = this.token;
-    if (name.is(TT.IDENTIFIER)) {
-      const t1 = this.peek(1);
-      if (
-        t1.isOr([
-          TT.EQ,
-          TT.PLUS_EQ,
-          TT.MINUS_EQ,
-          TT.MUL_EQ,
-          TT.DIV_EQ,
-          TT.POW_EQ,
-          TT.REMAINDER_EQ,
-          TT.SHL_EQ,
-          TT.SHR_EQ,
-          TT.BAND_EQ,
-          TT.XOR_EQ,
-          TT.BOR_EQ,
-          TT.AND_EQ,
-          TT.OR_EQ,
-          TT.NULLISH_EQ,
-        ])
-      ) {
-        this.next();
-        const operator = this.token;
-        this.next();
-        const value = this.varAssign();
-        return new VarAssignNode(name, operator, value);
-      } else {
-        return this.binaryExpr();
-      }
-    } else {
-      return this.binaryExpr();
-    }
-  }
-
   private whileStatement(): BaseNode {
     this.matchKeywordToken(Keyword.while);
 
@@ -429,6 +392,44 @@ export class Parser {
       elseNode = this.statement();
     }
     return new IfNode(condition, thenNode, elseNode);
+  }
+
+  private varAssign(): BaseNode {
+    // a = 1
+    // a += 1
+    const name = this.token;
+    if (name.is(TT.IDENTIFIER)) {
+      const t1 = this.peek(1);
+      if (
+        t1.isOr([
+          TT.EQ,
+          TT.PLUS_EQ,
+          TT.MINUS_EQ,
+          TT.MUL_EQ,
+          TT.DIV_EQ,
+          TT.POW_EQ,
+          TT.REMAINDER_EQ,
+          TT.SHL_EQ,
+          TT.SHR_EQ,
+          TT.BAND_EQ,
+          TT.XOR_EQ,
+          TT.BOR_EQ,
+          TT.AND_EQ,
+          TT.OR_EQ,
+          TT.NULLISH_EQ,
+        ])
+      ) {
+        this.next();
+        const operator = this.token;
+        this.next();
+        const value = this.varAssign();
+        return new VarAssignNode(name, operator, value);
+      } else {
+        return this.binaryExpr();
+      }
+    } else {
+      return this.binaryExpr();
+    }
   }
 
   private binaryExpr(parentPrecedence = 0): BaseNode {
@@ -512,6 +513,14 @@ export class Parser {
     } else if (token.is(TT.STRING)) {
       this.next();
       return new StringNode(token);
+    } else if (token.is(TT.LSPAN)) {
+      this.next();
+      const nodes: BaseNode[] = [];
+      while (!this.token.is(TT.RSPAN)) {
+        nodes.push( this.varAssign() );
+      }
+      this.next();
+      return new TextSpanNode(nodes);
     } else if (token.is(TT.IDENTIFIER)) {
       this.next();
       return new VarAccessNode(token);

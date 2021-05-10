@@ -33,4 +33,7 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(` print( f1(1)(2) ) `);
+// run(` $"hello {1} ..." `);
+
+// $"hello { 1 } ..."
+// "hello " + 1 + "..."

@@ -21,6 +21,9 @@ export enum TT {
   ARROW = "ARROW", // =>
   COMMENT = "COMMENT", // 注释
 
+  LSPAN = "LSPAN",
+  RSPAN = "RSPAN",
+
   // 运算
   PLUS = "PLUS", // +
   MINUS = "MINUS", // -

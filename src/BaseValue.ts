@@ -562,7 +562,7 @@ export class NullValue extends BaseValue {
 
 export class StringValue extends BaseValue {
   toStr(): StringValue {
-    return new StringValue(this.toString());
+    return new StringValue(this.value);
   }
   toInt(): IntValue {
     return new IntValue(parseInt(this.value, 10));

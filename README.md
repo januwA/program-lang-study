@@ -1,10 +1,6 @@
 ## 编程语言学习
 
-# Types
-
-## Number
-
-### int
+# int
 ```
 hex: 0xc8, 0hc8, 0c8h
 dec: 0d200, 200, 0200d
@@ -12,25 +8,30 @@ oct: 0o310, 0q310, 310q, 310o
 bin: 0b1100_1000, 0y1100_1000, 11001000b, 1100_1000b, 1100_1000y
 ```
 
-### float
+# float
 ```
 1.23, .23
 ```
 
-### [运算符优先级](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Operator_Precedence)
+# [运算符优先级](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Operator_Precedence)
 
 
-## bool
+# bool
 ```
 true, false
 ```
 
-## string
+# string
 ```
 "str", 'str', 'str\'str\'', "str'str'"
+
+
+$"123 \{ 123 \}"  => "123 { 123 }"
+
+$"123 { 123 }"    => "123 123"
 ```
 
-## Null
+# Null
 ```
 null
 ```

@@ -1,5 +1,5 @@
 import { LabelSymbol } from "./Context";
-import { Token } from "./Token";
+import { Token, TT } from "./Token";
 
 // AST Node
 
@@ -29,6 +29,7 @@ export enum NT {
   RET,
   CONTINUE,
   BREAK,
+  TEXT_SPAN,
 }
 
 export abstract class BaseNode {
@@ -164,6 +165,26 @@ export class StringNode extends BaseNode {
     return `"${this.token.value}"`;
   }
   constructor(public token: Token) {
+    super();
+  }
+}
+
+export class TextSpanNode extends BaseNode {
+  id(): NT {
+    return NT.TEXT_SPAN;
+  }
+  toString(): string {
+    let text = "";
+    for (const t of this.nodes) {
+      if (t.id() === NT.STRING) {
+        text += t.toString();
+      } else {
+        text += `{${t.toString()}}`;
+      }
+    }
+    return `$"${text}"`;
+  }
+  constructor(public nodes: BaseNode[]) {
     super();
   }
 }
