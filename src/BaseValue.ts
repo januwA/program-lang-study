@@ -1,7 +1,7 @@
 import { Context, VariableSymbol } from "./Context";
 import { Interpreter } from "./Interpreter";
 import { BaseNode, FunParam } from "./BaseNode";
-import { TYPES } from "./Token";
+import { BaseTypes } from "./BaseTypes";
 
 export abstract class BaseValue {
   abstract toString(): string;
@@ -61,7 +61,7 @@ export class IntValue extends BaseValue {
     return new BoolValue(!!this.value);
   }
   typeof(): string {
-    return TYPES.int;
+    return BaseTypes.int;
   }
   isTren(): boolean {
     return false;
@@ -225,7 +225,7 @@ export class FloatValue extends BaseValue {
     return new BoolValue(!!this.value);
   }
   typeof(): string {
-    return TYPES.float;
+    return BaseTypes.float;
   }
   isTren(): boolean {
     return false;
@@ -381,7 +381,7 @@ export class BoolValue extends BaseValue {
     return this;
   }
   typeof(): string {
-    return TYPES.bool;
+    return BaseTypes.bool;
   }
   pow(other: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
@@ -483,7 +483,7 @@ export class NullValue extends BaseValue {
   }
 
   typeof(): string {
-    return TYPES.Null;
+    return BaseTypes.Null;
   }
 
   toString(): string {
@@ -577,7 +577,7 @@ export class StringValue extends BaseValue {
     return `"${this.value}"`;
   }
   typeof(): string {
-    return TYPES.string;
+    return BaseTypes.string;
   }
   not(): BoolValue {
     return new BoolValue(!this.value);
@@ -786,7 +786,7 @@ export abstract class BaseFunctionValue extends BaseValue {
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
       const param = this.params[i];
-      if (param.type !== TYPES.auto && param.type !== arg.typeof()) {
+      if (param.type !== BaseTypes.auto && param.type !== arg.typeof()) {
         throw `Parameter type error`;
       }
     }
@@ -869,9 +869,9 @@ export class BuiltInFunction extends BaseFunctionValue {
 
   static print() {
     return new BuiltInFunction(
-      TYPES.Null,
+      BaseTypes.Null,
       "print",
-      [{ name: "input", type: TYPES.auto }],
+      [{ name: "input", type: BaseTypes.auto }],
       (context, self: BuiltInFunction) => {
         console.log(context.getVariable("input").value.toString());
         return new NullValue();
@@ -881,9 +881,9 @@ export class BuiltInFunction extends BaseFunctionValue {
 
   static typeof() {
     return new BuiltInFunction(
-      TYPES.string,
+      BaseTypes.string,
       "typeof",
-      [{ type: TYPES.auto, name: "data" }],
+      [{ type: BaseTypes.auto, name: "data" }],
       (context, self: BuiltInFunction) => {
         return new StringValue(context.getVariable("data").value.typeof());
       }

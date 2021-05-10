@@ -12,7 +12,6 @@ import {
   FunNode,
   HexNode,
   IfNode,
-  LabelNode,
   MemberNode,
   NT,
   OctNode,
@@ -25,7 +24,7 @@ import {
   WhileNode,
 } from "./BaseNode";
 import { BaseNode } from "./BaseNode";
-import { TT, TYPES } from "./Token";
+import { TT } from "./Token";
 import {
   BaseFunctionValue,
   BaseValue,
@@ -36,6 +35,7 @@ import {
   NullValue,
   StringValue,
 } from "./BaseValue";
+import { BaseTypes } from "./BaseTypes";
 
 /**
  * 解析语法树
@@ -143,10 +143,6 @@ export class Interpreter {
   visitMember(node: MemberNode, context: Context): BaseValue {
     let result: BaseValue = new NullValue();
     for (const statement of node.statements) {
-      if (statement instanceof LabelNode) {
-        context.labels.set(statement.label.name, statement.label);
-        continue;
-      }
       result = this.visit(statement, context);
     }
     return result;
@@ -326,9 +322,9 @@ export class Interpreter {
         value = data.value.nullishCoalescing(value);
       }
 
-      if (data.type !== TYPES.auto) {
+      if (data.type !== BaseTypes.auto) {
         const valueType: string = value.typeof();
-        if (valueType !== data.type && valueType !== TYPES.Null) {
+        if (valueType !== data.type && valueType !== BaseTypes.Null) {
           throw `The ${valueType} type cannot be assigned to the ${data.type} type`;
         }
       }
@@ -340,14 +336,15 @@ export class Interpreter {
 
   // 定义变量
   visitVarDeclare(node: VarDeclareNode, context: Context): BaseValue {
-    const name = node.name.value;
+    const name: string = node.name.value;
+    const type: string = node.type.value;
     if (context.canDeclareVariable(name)) {
       const value: BaseValue = this.visit(node.value, context);
 
       // check type
-      if (!node.type.isKeyword(TYPES.auto)) {
+      if (type !== BaseTypes.auto) {
         const valueType: string = value.typeof();
-        if (valueType !== node.type.value && valueType !== TYPES.Null) {
+        if (valueType !== type && valueType !== BaseTypes.Null) {
           throw `The ${valueType} type cannot be assigned to the ${node.type.value} type`;
         }
       }
@@ -377,18 +374,18 @@ export class Interpreter {
         return this.visit(node.node, context).not();
       case TT.BNOT:
         return this.visit(node.node, context).bnot();
-      case TT.KEYWORD: {
+      case TT.IDENTIFIER: {
         switch (node.token.value) {
-          case TYPES.int:
+          case BaseTypes.int:
             return this.visit(node.node, context).toInt();
-          case TYPES.float:
+          case BaseTypes.float:
             return this.visit(node.node, context).toFloat();
-          case TYPES.string:
+          case BaseTypes.string:
             return this.visit(node.node, context).toStr();
-          case TYPES.bool:
+          case BaseTypes.bool:
             return this.visit(node.node, context).toBool();
           default:
-            break;
+            throw `Type conversion failed ${node.token.value}`
         }
       }
       default:

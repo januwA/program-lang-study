@@ -69,42 +69,6 @@ export enum TT {
   EOF = "EOF",
 }
 
-export enum TYPES {
-  auto = "auto",
-  bool = "bool",
-  int = "int",
-  float = "float",
-  string = "string",
-  Null = "Null",
-}
-
-export const KEYWORD = [
-  "true",
-  "false",
-  "null",
-
-  "const",
-  TYPES.auto,
-  TYPES.bool,
-  TYPES.int,
-  TYPES.float,
-  TYPES.string,
-  TYPES.Null,
-
-  "ret",
-
-  "if",
-  "elif",
-  "else",
-
-  "while",
-  "for",
-  "continue",
-  "break",
-
-  "jmp",
-];
-
 export class Token {
   constructor(
     public type: TT,
@@ -123,10 +87,6 @@ export class Token {
 
   toString() {
     return `${this.type}:${this.value}`;
-  }
-
-  isKeyword(k: string) {
-    return this.type === TT.KEYWORD && this.value === k;
   }
 
   is(t: TT) {

@@ -4,17 +4,18 @@ import { BaseValue, BuiltInFunction } from "./BaseValue";
 import { Lexer } from "./Lexer";
 import { Parser } from "./Parser";
 import { BaseNode } from "./BaseNode";
-import { Token, TT, TYPES } from "./Token";
+import { Token, TT } from "./Token";
+import { BaseTypes } from "./BaseTypes";
 
 const globalContext: Context = new Context(null);
 
 globalContext.declareVariable(
   "print",
-  new VariableSymbol(true, "fun", BuiltInFunction.print())
+  new VariableSymbol(true, BaseTypes.fun, BuiltInFunction.print())
 );
 globalContext.declareVariable(
   "typeof",
-  new VariableSymbol(true, "fun", BuiltInFunction.typeof())
+  new VariableSymbol(true, BaseTypes.fun, BuiltInFunction.typeof())
 );
 
 export function run(text: string): BaseValue {

@@ -27,7 +27,9 @@ import {
   VarDeclareNode,
   WhileNode,
 } from "./BaseNode";
-import { KEYWORD, Token, TT, TYPES } from "./Token";
+import { BaseTypes } from "./BaseTypes";
+import { KEYWORDS, Keyword } from "./Keywords";
+import { Token, TT } from "./Token";
 
 /**
  * 将token表解析为AST语法树
@@ -48,11 +50,11 @@ export class Parser {
   }
 
   private peek(offset: number): Token {
-    return this.tokens[this.pos + offset - 1];
+    return this.tokens[this.pos + offset - 1] ?? null;
   }
 
   private matchKeywordToken(keyword: string): Token {
-    if (this.token.isKeyword(keyword)) {
+    if (this.token.is(TT.KEYWORD) && KEYWORDS.includes(this.token.value)) {
       const result = this.token;
       this.next();
       return result;
@@ -174,7 +176,7 @@ export class Parser {
 
     if (
       token.is(TT.LPAREN) &&
-      this.peek(1).is(TT.KEYWORD) &&
+      this.peek(1).is(TT.IDENTIFIER) &&
       this.peek(2).is(TT.RPAREN)
     ) {
       return 17;
@@ -260,34 +262,41 @@ export class Parser {
     const token = this.token;
     if (token.is(TT.LBLOCK)) {
       result = this.blockStatement();
-    } else if (token.isKeyword("const")) {
-      this.next();
-      result = this.variableDeclare(true);
-    } else if (token.isKeyword("if")) {
-      result = this.ifStatement();
-    } else if (token.isKeyword("while")) {
-      result = this.whileStatement();
-    } else if (token.isKeyword("for")) {
-      result = this.forStatement();
-    } else if (token.isKeyword("ret")) {
-      result = this.retStatement();
-    } else if (token.isKeyword("continue")) {
-      result = this.continueStatement();
-    } else if (token.isKeyword("break")) {
-      result = this.breakStatement();
-    } else if (token.is(TT.KEYWORD) || token.is(TT.IDENTIFIER)) {
+    } else if (token.is(TT.KEYWORD)) {
+      if (token.value === Keyword.const) {
+        this.next();
+        result = this.variableDeclare(true);
+      } else if (token.value === Keyword.if) {
+        result = this.ifStatement();
+      } else if (token.value === Keyword.while) {
+        result = this.whileStatement();
+      } else if (token.value === Keyword.for) {
+        result = this.forStatement();
+      } else if (token.value === Keyword.ret) {
+        result = this.retStatement();
+      } else if (token.value === Keyword.continue) {
+        result = this.continueStatement();
+      } else if (token.value === Keyword.break) {
+        result = this.breakStatement();
+      } else {
+        throw `Unknown Keyword ${token.value}`;
+      }
+    } else if (token.is(TT.IDENTIFIER)) {
+      // a
       // int a = 1
       // int add() => 1
-      if (this.peek(1).is(TT.IDENTIFIER)) {
-        if (this.peek(2).is(TT.EQ)) {
+
+      const t: Token | null = this.peek(2);
+      if (!t) {
+        result = this.expr();
+      } else {
+        if (t.is(TT.EQ)) {
           result = this.variableDeclare();
-        } else if (this.peek(2).is(TT.LPAREN)) {
+        } else if (t.is(TT.LPAREN)) {
           result = this.fun();
         } else {
           result = this.expr();
         }
-      } else {
-        result = this.expr();
       }
     } else {
       result = this.expr();
@@ -307,7 +316,7 @@ export class Parser {
     let value: BaseNode = null;
 
     // ret 1
-    
+
     // ret
     // 1
     if (retRow === valueToken.posStart.row) value = this.expr();
@@ -337,9 +346,7 @@ export class Parser {
 
   private variableDeclare(isConst = false): BaseNode {
     // auto a = 1
-    const type = this.token; // type is keyword or ident
-    this.next();
-
+    const type = this.matchToken(TT.IDENTIFIER);
     const name = this.matchToken(TT.IDENTIFIER);
     this.matchToken(TT.EQ);
     const value = this.expr();
@@ -382,7 +389,7 @@ export class Parser {
   }
 
   private whileStatement(): BaseNode {
-    this.matchKeywordToken("while");
+    this.matchKeywordToken(Keyword.while);
 
     this.matchToken(TT.LPAREN);
     const condition = this.expr();
@@ -393,7 +400,7 @@ export class Parser {
   }
 
   private forStatement(): BaseNode {
-    this.matchKeywordToken("for");
+    this.matchKeywordToken(Keyword.for);
     this.matchToken(TT.LPAREN);
     const init = this.variableDeclare();
     this.matchToken(TT.SEMICOLON);
@@ -409,7 +416,7 @@ export class Parser {
   }
 
   private ifStatement(): BaseNode {
-    this.matchKeywordToken("if");
+    this.matchKeywordToken(Keyword.if);
 
     this.matchToken(TT.LPAREN);
     const condition = this.expr();
@@ -417,7 +424,7 @@ export class Parser {
 
     const thenNode = this.statement();
     let elseNode = null;
-    if (this.token.isKeyword("else")) {
+    if (this.token.value === Keyword.else) {
       this.next();
       elseNode = this.statement();
     }
@@ -501,17 +508,23 @@ export class Parser {
     } else if (token.is(TT.IDENTIFIER)) {
       this.next();
       return new VarAccessNode(token);
+    } else if (token.is(TT.KEYWORD)) {
+      switch (token.value) {
+        case Keyword.null:
+          this.next();
+          return new NullNode(token);
+        case Keyword.true:
+        case Keyword.false:
+          this.next();
+          return new BoolNode(token);
+        default:
+          throw `Wrong keyword ${token.value}`
+      }
     } else if (token.is(TT.LPAREN)) {
       this.next();
       const _expr = this.expr();
       this.matchToken(TT.RPAREN);
       return _expr;
-    } else if (token.isKeyword("null")) {
-      this.next();
-      return new NullNode(token);
-    } else if (token.isKeyword("true") || token.isKeyword("false")) {
-      this.next();
-      return new BoolNode(token);
     } else {
       throw new SyntaxError(
         `Unexpected token '${token.value}'`,

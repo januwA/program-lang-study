@@ -28,7 +28,7 @@ export enum NT {
   MEMBER,
   RET,
   CONTINUE,
-  BREAK
+  BREAK,
 }
 
 export abstract class BaseNode {
@@ -128,7 +128,7 @@ export class UnaryNode extends BaseNode {
     return NT.UNARY;
   }
   toString(): string {
-    return `${this.token.value}${this.node.toString()}`;
+    return `(${this.token.value})${this.node.toString()}`;
   }
   constructor(public token: Token, public node: BaseNode) {
     super();
@@ -258,11 +258,11 @@ export class MemberNode extends BaseNode {
     return NT.MEMBER;
   }
   toString(): string {
-    return `{ ${this.statements
-      .map((it) => it.toString())
+    return `${this.statements
+      .map((it) => it.toString() + ";")
       .reduce((acc, it) => {
         return acc + it;
-      }, "")} }`;
+      }, "")}`;
   }
   constructor(public statements: BaseNode[]) {
     super();
@@ -385,7 +385,7 @@ export class FunNode extends BaseNode {
 
 export class RetNode extends BaseNode {
   toString(): string {
-    return `ret ${this.value.toString()}`;
+    return `ret ${this.value?.toString()}`;
   }
   id(): NT {
     return NT.RET;

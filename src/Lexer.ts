@@ -1,6 +1,7 @@
 import { SyntaxError } from "./BaseError";
+import { KEYWORDS } from "./Keywords";
 import { Position } from "./Position";
-import { KEYWORD, Token, TT } from "./Token";
+import { Token, TT } from "./Token";
 
 const DEC_EXP = /[\d\.]/;
 const NUMBER_EXP = /[a-f\d\._]/i;
@@ -45,7 +46,7 @@ export class Lexer {
         this.next();
       }
 
-      if (KEYWORD.includes(val)) type = TT.KEYWORD;
+      if (KEYWORDS.includes(val)) type = TT.KEYWORD;
       return new Token(type, val, posStart, this.pos);
     }
 

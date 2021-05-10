@@ -33,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(`"asd" + (string)1 + " end"`);
+// run(` while(true) if( !(i < 0) ) break `);
