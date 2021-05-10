@@ -76,7 +76,6 @@ export enum TYPES {
   float = "float",
   string = "string",
   Null = "Null",
-  fun = "fun",
 }
 
 export const KEYWORD = [
@@ -92,7 +91,6 @@ export const KEYWORD = [
   TYPES.string,
   TYPES.Null,
 
-  TYPES.fun,
   "ret",
 
   "if",

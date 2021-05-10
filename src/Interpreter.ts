@@ -161,7 +161,7 @@ export class Interpreter {
     );
     context.declareVariable(
       node.name.value,
-      new VariableSymbol(true, TYPES.fun, value)
+      new VariableSymbol(true, "fun", value)
     );
     return new NullValue();
   }

@@ -1,5 +1,5 @@
-fun Null Test(string text) {
-  fun string hello(string name) => "Hello " + name
+Null Test(string text) {
+  string hello(string name) => "Hello " + name
 
   const fun hi = hello
   print( hi(text) )

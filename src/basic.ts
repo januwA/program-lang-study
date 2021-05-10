@@ -10,11 +10,11 @@ const globalContext: Context = new Context(null);
 
 globalContext.declareVariable(
   "print",
-  new VariableSymbol(true, TYPES.fun, BuiltInFunction.print())
+  new VariableSymbol(true, "fun", BuiltInFunction.print())
 );
 globalContext.declareVariable(
   "typeof",
-  new VariableSymbol(true, TYPES.fun, BuiltInFunction.typeof())
+  new VariableSymbol(true, "fun", BuiltInFunction.typeof())
 );
 
 export function run(text: string): BaseValue {

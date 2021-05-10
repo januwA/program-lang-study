@@ -211,7 +211,6 @@ export class Parser {
   }
 
   private fun(): BaseNode {
-    this.matchKeywordToken(TYPES.fun);
     const returnType = this.token;
     this.next();
 
@@ -263,18 +262,8 @@ export class Parser {
     } else if (token.isKeyword("const")) {
       this.next();
       return this.variableDeclare(true);
-    } else if (
-      token.isKeyword(TYPES.auto) ||
-      token.isKeyword(TYPES.bool) ||
-      token.isKeyword(TYPES.int) ||
-      token.isKeyword(TYPES.float) ||
-      token.isKeyword(TYPES.string)
-    ) {
-      return this.variableDeclare();
     } else if (token.isKeyword("if")) {
       return this.ifStatement();
-    } else if (token.isKeyword(TYPES.fun)) {
-      return this.fun();
     } else if (token.isKeyword("while")) {
       return this.whileStatement();
     } else if (token.isKeyword("for")) {
@@ -293,6 +282,20 @@ export class Parser {
     } else if (token.isKeyword("break")) {
       this.next();
       return new BreakNode();
+    } else if (token.is(TT.KEYWORD) || token.is(TT.IDENTIFIER)) {
+      // int a = 1
+      // int add() => 1
+      if (this.peek(1).is(TT.IDENTIFIER)) {
+        if (this.peek(2).is(TT.EQ)) {
+          return this.variableDeclare();
+        } else if (this.peek(2).is(TT.LPAREN)) {
+          return this.fun();
+        } else {
+          return this.expr();
+        }
+      } else {
+        return this.expr();
+      }
     } else {
       return this.expr();
     }
@@ -311,7 +314,9 @@ export class Parser {
 
   private variableDeclare(isConst = false): BaseNode {
     // auto a = 1
-    const type = this.matchToken(TT.KEYWORD);
+    const type = this.token; // type is keyword or ident
+    this.next();
+
     const name = this.matchToken(TT.IDENTIFIER);
     this.matchToken(TT.EQ);
     const value = this.expr();

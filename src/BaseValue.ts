@@ -683,12 +683,12 @@ export abstract class BaseFunctionValue extends BaseValue {
   }
 
   toString(): string {
-    return `fun ${this.returnType} ${this.name.toString()}(${this.params
+    return `${this.returnType} ${this.name.toString()}(${this.params
       .map((it) => `${it.type} ${it.name}`)
       .toString()}) {}`;
   }
   typeof(): string {
-    return TYPES.fun;
+    return "fun";
   }
   not(): BoolValue {
     throw new Error("Method not implemented.");

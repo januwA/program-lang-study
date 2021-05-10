@@ -1,4 +1,4 @@
-fun Null assert(auto a, auto b) {
+Null assert(auto a, auto b) {
   if(a != b) print( "Access Error: " + (string)a + " != " + (string)b )
 }
 

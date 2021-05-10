@@ -60,11 +60,13 @@ typeof("123") => "string"
 
 # fun
 ```
-fun int add(int a, int b) => a + b
+int add(int a, int b) => a + b
 
-fun Null add(int a, int b) {
+Null add(int a, int b) {
   print(a + b)
 }
+
+const fun a = add
 ```
 
 # Conversion
