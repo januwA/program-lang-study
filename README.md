@@ -62,7 +62,7 @@ typeof("123") => "string"
 ```
 int add(int a, int b) => a + b
 
-Null add(int a, int b) {
+Null add(const int a, const int b) {
   print(a + b)
 }
 

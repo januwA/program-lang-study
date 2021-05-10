@@ -808,10 +808,10 @@ export class FunctionValue extends BaseFunctionValue {
 
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
-      const param = this.params[i];
+      const param: FunParam = this.params[i];
       newContext.declareVariable(
         param.name,
-        new VariableSymbol(false, param.type, arg)
+        new VariableSymbol(param.isConst, param.type, arg)
       );
     }
 
@@ -836,7 +836,7 @@ export class BuiltInFunction extends BaseFunctionValue {
     super(returnType, name, params, context);
   }
 
-  call(args: BaseValue[], interpreter: Interpreter): BaseValue {
+  call(args: BaseValue[], _: Interpreter): BaseValue {
     this.checkArgsLength(args);
     this.checkArgsType(args);
 
@@ -844,10 +844,10 @@ export class BuiltInFunction extends BaseFunctionValue {
 
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
-      const param = this.params[i];
+      const param: FunParam = this.params[i];
       newContext.declareVariable(
         param.name,
-        new VariableSymbol(false, param.type, arg)
+        new VariableSymbol(param.isConst, param.type, arg)
       );
     }
 
@@ -862,7 +862,7 @@ export class BuiltInFunction extends BaseFunctionValue {
     return new BuiltInFunction(
       BaseTypes.Null,
       "print",
-      [{ name: "input", type: BaseTypes.auto }],
+      [{ isConst: true, name: "input", type: BaseTypes.auto }],
       (context, self: BuiltInFunction) => {
         console.log(context.getVariable("input").value.toString());
         return new NullValue();
@@ -875,7 +875,7 @@ export class BuiltInFunction extends BaseFunctionValue {
     return new BuiltInFunction(
       BaseTypes.string,
       "typeof",
-      [{ type: BaseTypes.auto, name: "data" }],
+      [{ isConst: true, type: BaseTypes.auto, name: "data" }],
       (context, self: BuiltInFunction) => {
         return new StringValue(context.getVariable("data").value.typeof());
       },

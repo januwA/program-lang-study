@@ -1,4 +1,4 @@
-Null Test(string text) {
+Null Test(const string text) {
   string hello(string name) => "Hello " + name
 
   const fun hi = hello

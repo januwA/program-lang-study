@@ -89,7 +89,11 @@ export class Token {
     return `${this.type}:${this.value}`;
   }
 
-  is(t: TT) {
+  is(t: TT): boolean {
     return this.type === t;
+  }
+
+  isOr(ts: TT[]): boolean {
+    return ts.some((t) => this.is(t));
   }
 }

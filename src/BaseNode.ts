@@ -360,6 +360,7 @@ export class CallNode extends BaseNode {
 }
 
 export interface FunParam {
+  isConst: boolean;
   type: string;
   name: string;
 }

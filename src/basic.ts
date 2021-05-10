@@ -1,6 +1,6 @@
 import { Context, VariableSymbol } from "./Context";
 import { Interpreter } from "./Interpreter";
-import { BaseValue, BuiltInFunction } from "./BaseValue";
+import { BaseValue, BuiltInFunction, IntValue } from "./BaseValue";
 import { Lexer } from "./Lexer";
 import { Parser } from "./Parser";
 import { BaseNode } from "./BaseNode";

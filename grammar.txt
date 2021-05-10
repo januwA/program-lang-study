@@ -29,7 +29,7 @@ continue    : continue
 break       : break
 
 
-fun         : IDENTIFIER IDENTIFIER LPAREN ( IDENTIFIER IDENTIFIER (COMMA IDENTIFIER IDENTIFIER)* )? RPAREN (block|ARROW varAssign)
+fun         : IDENTIFIER IDENTIFIER LPAREN ( (const)? IDENTIFIER IDENTIFIER (COMMA (const)? IDENTIFIER IDENTIFIER)* )? RPAREN (block|ARROW varAssign)
 
 
 varAssign   : IDENTIFIER (EQ|operator_EQ) varAssign

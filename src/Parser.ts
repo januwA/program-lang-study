@@ -92,28 +92,23 @@ export class Parser {
       return 16;
     }
 
-    if (token.is(TT.MUL) || token.is(TT.DIV) || token.is(TT.REMAINDER)) {
+    if (token.isOr([TT.MUL, TT.DIV, TT.REMAINDER])) {
       return 15;
     }
 
-    if (token.is(TT.PLUS) || token.is(TT.MINUS)) {
+    if (token.isOr([TT.PLUS, TT.MINUS])) {
       return 14;
     }
 
-    if (token.is(TT.SHL) || token.is(TT.SHR)) {
+    if (token.isOr([TT.SHL, TT.SHR])) {
       return 13;
     }
 
-    if (
-      token.is(TT.LT) ||
-      token.is(TT.LTE) ||
-      token.is(TT.GT) ||
-      token.is(TT.GTE)
-    ) {
+    if (token.isOr([TT.LT, TT.LTE, TT.GT, TT.GTE])) {
       return 12;
     }
 
-    if (token.is(TT.EE) || token.is(TT.NE)) {
+    if (token.isOr([TT.EE, TT.NE])) {
       return 11;
     }
 
@@ -142,21 +137,23 @@ export class Parser {
     }
 
     if (
-      token.is(TT.EQ) ||
-      token.is(TT.PLUS_EQ) ||
-      token.is(TT.MINUS_EQ) ||
-      token.is(TT.MUL_EQ) ||
-      token.is(TT.DIV_EQ) ||
-      token.is(TT.POW_EQ) ||
-      token.is(TT.REMAINDER_EQ) ||
-      token.is(TT.SHL_EQ) ||
-      token.is(TT.SHR_EQ) ||
-      token.is(TT.BAND_EQ) ||
-      token.is(TT.BOR_EQ) ||
-      token.is(TT.XOR_EQ) ||
-      token.is(TT.AND_EQ) ||
-      token.is(TT.OR_EQ) ||
-      token.is(TT.NULLISH_EQ)
+      token.isOr([
+        TT.EQ,
+        TT.PLUS_EQ,
+        TT.MINUS_EQ,
+        TT.MUL_EQ,
+        TT.DIV_EQ,
+        TT.POW_EQ,
+        TT.REMAINDER_EQ,
+        TT.SHL_EQ,
+        TT.SHR_EQ,
+        TT.BAND_EQ,
+        TT.XOR_EQ,
+        TT.BOR_EQ,
+        TT.AND_EQ,
+        TT.OR_EQ,
+        TT.NULLISH_EQ,
+      ])
     ) {
       return 3;
     }
@@ -165,12 +162,7 @@ export class Parser {
   }
 
   private getUnaryOperatorPrecedence(token: Token): number {
-    if (
-      token.is(TT.NOT) ||
-      token.is(TT.PLUS) ||
-      token.is(TT.MINUS) ||
-      token.is(TT.BNOT)
-    ) {
+    if (token.isOr([TT.NOT, TT.PLUS, TT.MINUS, TT.BNOT])) {
       return 17;
     }
 
@@ -214,23 +206,31 @@ export class Parser {
     if (token.is(TT.LBLOCK)) {
       result = this.block();
     } else if (token.is(TT.KEYWORD)) {
-      if (token.value === Keyword.const) {
-        this.next();
-        result = this.varDeclare(true);
-      } else if (token.value === Keyword.if) {
-        result = this.ifStatement();
-      } else if (token.value === Keyword.while) {
-        result = this.whileStatement();
-      } else if (token.value === Keyword.for) {
-        result = this.forStatement();
-      } else if (token.value === Keyword.ret) {
-        result = this.retStatement();
-      } else if (token.value === Keyword.continue) {
-        result = this.continueStatement();
-      } else if (token.value === Keyword.break) {
-        result = this.breakStatement();
-      } else {
-        throw `Unknown Keyword ${token.value}`;
+      switch (token.value) {
+        case Keyword.const:
+          this.next();
+          result = this.varDeclare(true);
+          break;
+        case Keyword.if:
+          result = this.ifStatement();
+          break;
+        case Keyword.while:
+          result = this.whileStatement();
+          break;
+        case Keyword.for:
+          result = this.forStatement();
+          break;
+        case Keyword.ret:
+          result = this.retStatement();
+          break;
+        case Keyword.continue:
+          result = this.continueStatement();
+          break;
+        case Keyword.break:
+          result = this.breakStatement();
+          break;
+        default:
+          throw `Unknown Keyword ${token.value}`;
       }
     } else if (token.is(TT.IDENTIFIER)) {
       // a
@@ -268,22 +268,11 @@ export class Parser {
     if (this.token.is(TT.RPAREN)) {
       this.next();
     } else {
-      const type = this.matchToken(TT.IDENTIFIER);
-      const name = this.matchToken(TT.IDENTIFIER);
-
-      params.push({
-        type: type.value,
-        name: name.value,
-      });
+      params.push(this._getFunParamItem());
 
       while (this.token.is(TT.COMMA)) {
         this.next();
-        const type = this.matchToken(TT.IDENTIFIER);
-        const name = this.matchToken(TT.IDENTIFIER);
-        params.push({
-          type: type.value,
-          name: name.value,
-        });
+        params.push(this._getFunParamItem());
       }
 
       this.matchToken(TT.RPAREN);
@@ -299,6 +288,22 @@ export class Parser {
       body = this.varAssign();
     }
     return new FunNode(retType.value, name, params, body);
+  }
+
+  private _getFunParamItem(): FunParam {
+    let isConst = false;
+    if (this.token.is(TT.KEYWORD) && this.token.value === Keyword.const) {
+      this.next();
+      isConst = true;
+    }
+    const type = this.matchToken(TT.IDENTIFIER);
+    const name = this.matchToken(TT.IDENTIFIER);
+
+    return {
+      isConst: isConst,
+      type: type.value,
+      name: name.value,
+    };
   }
 
   private retStatement() {
@@ -347,25 +352,28 @@ export class Parser {
 
   private varAssign(): BaseNode {
     // a = 1
+    // a += 1
     const name = this.token;
     if (name.is(TT.IDENTIFIER)) {
-      const nextToken = this.peek(1);
+      const t1 = this.peek(1);
       if (
-        nextToken.is(TT.EQ) ||
-        nextToken.is(TT.PLUS_EQ) ||
-        nextToken.is(TT.MINUS_EQ) ||
-        nextToken.is(TT.MUL_EQ) ||
-        nextToken.is(TT.DIV_EQ) ||
-        nextToken.is(TT.POW_EQ) ||
-        nextToken.is(TT.REMAINDER_EQ) ||
-        nextToken.is(TT.SHL_EQ) ||
-        nextToken.is(TT.SHR_EQ) ||
-        nextToken.is(TT.BAND_EQ) ||
-        nextToken.is(TT.XOR_EQ) ||
-        nextToken.is(TT.BOR_EQ) ||
-        nextToken.is(TT.AND_EQ) ||
-        nextToken.is(TT.OR_EQ) ||
-        nextToken.is(TT.NULLISH_EQ)
+        t1.isOr([
+          TT.EQ,
+          TT.PLUS_EQ,
+          TT.MINUS_EQ,
+          TT.MUL_EQ,
+          TT.DIV_EQ,
+          TT.POW_EQ,
+          TT.REMAINDER_EQ,
+          TT.SHL_EQ,
+          TT.SHR_EQ,
+          TT.BAND_EQ,
+          TT.XOR_EQ,
+          TT.BOR_EQ,
+          TT.AND_EQ,
+          TT.OR_EQ,
+          TT.NULLISH_EQ,
+        ])
       ) {
         this.next();
         const operator = this.token;
@@ -469,7 +477,7 @@ export class Parser {
     return new CallNode(atom, args);
   }
 
-  private unaryExpr(unaryPrecedence): BaseNode {
+  private unaryExpr(unaryPrecedence: number): BaseNode {
     const token = this.token;
     if (token.is(TT.LPAREN)) {
       this.matchToken(TT.LPAREN);
