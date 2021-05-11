@@ -1,7 +1,7 @@
 int i = 10
 while(true) {
   print(i)
-  i -= 1
+  i--
 
   if(i <= 5) break
 }

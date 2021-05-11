@@ -33,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(`int a = 1; ++a `);
+// run(` 1 == 1 ? 1 : 2 `);

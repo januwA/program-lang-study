@@ -63,8 +63,11 @@ typeof("123") => "string"
 ```
 int add(int a, int b) => a + b
 
-Null add(const int a, const int b) {
+int add(const int a, const int b) {
+  // a++; // error
+
   print(a + b)
+  ret a + b;
 }
 
 const fun a = add
@@ -77,4 +80,48 @@ const fun a = add
 
 (float)1   => 1.0
 (string)1   => "1"
+```
+
+# Ternary expression
+```
+int a = true ? 1 : 2;
+```
+
+# Post-expression
+```
+int a = 1;
+a--;
+a++;
+```
+
+# Pre-expression
+```
+int a = 1;
+--a;
+++a;
+```
+
+# if,elif,else
+```
+int age = 111;
+if( age == 10 ) {
+  print(1)
+} elif ( age == 11) {
+  print(2)
+} elif ( age == 12) {
+  print(3)
+} else {
+  print(4)
+}
+```
+
+# while
+```
+int i = 10
+while(true) {
+  print(i)
+  i--
+
+  if(i <= 5) break
+}
 ```

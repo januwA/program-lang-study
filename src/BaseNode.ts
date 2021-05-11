@@ -30,6 +30,7 @@ export enum NT {
   CONTINUE,
   BREAK,
   TEXT_SPAN,
+  TERNARY,
 }
 
 export abstract class BaseNode {
@@ -225,7 +226,9 @@ export class VarAssignNode extends BaseNode {
     return NT.VarAssign;
   }
   toString(): string {
-    return `${this.name.value} ${this.operator.value} ${this.value?.toString()}`;
+    return `${this.name.value} ${
+      this.operator.value
+    } ${this.value?.toString()}`;
   }
   constructor(
     public name: Token,
@@ -447,6 +450,23 @@ export class BreakNode extends BaseNode {
   }
 
   constructor() {
+    super();
+  }
+}
+
+export class TernaryNode extends BaseNode {
+  toString(): string {
+    return `${this.condition.toString()}?${this.thenNode.toString()}:${this.elseNode.toString()}`;
+  }
+  id(): NT {
+    return NT.TERNARY;
+  }
+
+  constructor(
+    public condition: BaseNode,
+    public thenNode: BaseNode,
+    public elseNode: BaseNode
+  ) {
     super();
   }
 }

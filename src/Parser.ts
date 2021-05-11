@@ -21,6 +21,7 @@ import {
   OctNode,
   RetNode,
   StringNode,
+  TernaryNode,
   TextSpanNode,
   UnaryNode,
   VarAccessNode,
@@ -28,7 +29,6 @@ import {
   VarDeclareNode,
   WhileNode,
 } from "./BaseNode";
-import { BaseTypes } from "./BaseTypes";
 import { KEYWORDS, Keyword } from "./Keywords";
 import { Token, TT } from "./Token";
 
@@ -231,7 +231,7 @@ export class Parser {
           result = this.breakStatement();
           break;
         default:
-          throw `Unknown Keyword ${token.value}`;
+          result = this.varAssign();
       }
     } else if (token.is(TT.IDENTIFIER)) {
       // a
@@ -451,8 +451,23 @@ export class Parser {
         return this.binaryExpr();
       }
     } else {
-      return this.binaryExpr();
+      let result = this.binaryExpr();
+
+      if (this.token.is(TT.QMAKE)) {
+        return this.ternaryExpr(result);
+      } else {
+        return result;
+      }
     }
+  }
+
+  // <condition> ? <binaryExpr> : <binaryExpr>
+  private ternaryExpr(condition: BaseNode) {
+    this.matchToken(TT.QMAKE);
+    const thenNode = this.varAssign();
+    this.matchToken(TT.COLON);
+    const elseNode = this.varAssign();
+    return new TernaryNode(condition, thenNode, elseNode);
   }
 
   private binaryExpr(parentPrecedence = 0): BaseNode {
@@ -464,8 +479,8 @@ export class Parser {
     } else {
       const atom = this.atom();
 
-      // a()
       if (this.token.is(TT.LPAREN)) {
+        // a()
         left = this.call(atom);
       } else {
         left = atom;

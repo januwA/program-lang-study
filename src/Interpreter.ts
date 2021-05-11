@@ -17,6 +17,7 @@ import {
   OctNode,
   RetNode,
   StringNode,
+  TernaryNode,
   TextSpanNode,
   UnaryNode,
   VarAccessNode,
@@ -130,8 +131,17 @@ export class Interpreter {
         }
         this.isBreak = true;
         return new NullValue();
+      case NT.TERNARY:
+        return this.visitTernary(node as TernaryNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
+    }
+  }
+  visitTernary(node: TernaryNode, context: Context): BaseValue {
+    if (this.visit(node.condition, context).isTren()) {
+      return this.visit(node.thenNode, context);
+    } else {
+      return this.visit(node.elseNode, context);
     }
   }
 
