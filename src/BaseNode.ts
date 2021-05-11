@@ -225,12 +225,12 @@ export class VarAssignNode extends BaseNode {
     return NT.VarAssign;
   }
   toString(): string {
-    return `${this.name.value} ${this.operator.value} ${this.value.toString()}`;
+    return `${this.name.value} ${this.operator.value} ${this.value?.toString()}`;
   }
   constructor(
     public name: Token,
     public operator: Token,
-    public value: BaseNode
+    public value?: BaseNode
   ) {
     super();
   }

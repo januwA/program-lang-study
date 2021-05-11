@@ -38,6 +38,8 @@ export enum TT {
   SHL = "SHL", // <<
   SHR = "SHR", // >>
   NULLISH = "NULLISH", // ??
+  PPLUS = "PPLUS", // ++
+  MMINUS = "MMINUS", // --
 
   // 逻辑
   NOT = "NOT", // !

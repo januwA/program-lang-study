@@ -114,6 +114,9 @@ export class Lexer {
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.PLUS_EQ, "+=", posStart, this.pos);
+        } else if ((this.c as string) === "+") {
+          this.next();
+          return new Token(TT.PPLUS, "++", posStart, this.pos);
         } else {
           return new Token(TT.PLUS, "+", posStart);
         }
@@ -123,6 +126,9 @@ export class Lexer {
         if ((this.c as string) === "=") {
           this.next();
           return new Token(TT.MINUS_EQ, "-=", posStart, this.pos);
+        } else if ((this.c as string) === "-") {
+          this.next();
+          return new Token(TT.MMINUS, "--", posStart, this.pos);
         } else {
           return new Token(TT.MINUS, "-", posStart);
         }
@@ -351,8 +357,10 @@ export class Lexer {
       }
 
       if (this.c === "{") {
-        tokens.push(new Token(TT.STRING, val, posStart, this.pos));
-        val = "";
+        if (val) {
+          tokens.push(new Token(TT.STRING, val, posStart, this.pos));
+          val = "";
+        }
         this.next();
 
         while ((this.c as string) !== "}") {

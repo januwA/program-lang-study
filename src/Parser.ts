@@ -442,6 +442,11 @@ export class Parser {
         this.next();
         const value = this.varAssign();
         return new VarAssignNode(name, operator, value);
+      } else if (t1.isOr([TT.PPLUS, TT.MMINUS])) {
+        this.next();
+        const operator = this.token;
+        this.next();
+        return new VarAssignNode(name, operator, null);
       } else {
         return this.binaryExpr();
       }

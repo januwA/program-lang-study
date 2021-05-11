@@ -1,30 +1,30 @@
-for(int i = 0; i < 10; i += 1) {
+for(int i = 0; i < 10; i++) {
   if( i % 2 == 0) {
-    print( "even: " + (string)i );
+    print($"even: {i}");
   } else {
-    print( "odd: " + (string)i );
+    print($"odd: {i}");
   }
 };
 
 print("===============================");
 
 
-for(int i = 0; i < 10; i += 1) {
+for(int i = 0; i < 10; i++) {
   if(i == 5) break
 
   if(i % 2 == 0) {
-    print("continue: " + (string)i)
+    print($"continue: {i}")
     continue
     print(233)
   }
 
-  print("Test break and continue: " + (string)i)
+  print($"Test break and continue: {i}")
 }
 
 print("===============================")
 
-for(int i = 0; i < 10; i += 1) {  
-  for(int j = 0; j < 10; j += 1) {  
+for(int i = 0; i < 10; i++) {  
+  for(int j = 0; j < 10; j++) {  
     break
   }
 
@@ -51,7 +51,7 @@ if( age == 10 ) {
 
 print("===============================")
 
-                             for (int i = 0; i < 3; i += 1) 
+                             for (int i = 0; i < 3; i++) 
 
 
 print(i);

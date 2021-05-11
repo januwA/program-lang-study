@@ -198,7 +198,7 @@ export class Interpreter {
     let result: BaseValue = new NullValue();
     context = new Context(context);
     this.visit(node.init, context);
-    
+
     const outControlFlow = this.inControlFlow();
     while (true) {
       const condition: BaseValue = this.visit(node.condition, context);
@@ -300,49 +300,68 @@ export class Interpreter {
   visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
     const name = node.name.value;
     if (context.hasVariable(name)) {
-      const data = context.getVariable(name);
-      if (data.isConst) {
+      const varSymbol = context.getVariable(name);
+      if (varSymbol.isConst) {
         throw `Assignment to constant variable.`;
       }
-      let value: BaseValue = this.visit(node.value, context);
 
-      if (node.operator.is(TT.PLUS_EQ)) {
-        value = data.value.add(value);
-      } else if (node.operator.is(TT.MINUS_EQ)) {
-        value = data.value.sub(value);
-      } else if (node.operator.is(TT.MUL_EQ)) {
-        value = data.value.mul(value);
-      } else if (node.operator.is(TT.DIV_EQ)) {
-        value = data.value.mul(value);
-      } else if (node.operator.is(TT.POW_EQ)) {
-        value = data.value.pow(value);
-      } else if (node.operator.is(TT.REMAINDER_EQ)) {
-        value = data.value.remainder(value);
-      } else if (node.operator.is(TT.SHL_EQ)) {
-        value = data.value.shl(value);
-      } else if (node.operator.is(TT.SHR_EQ)) {
-        value = data.value.shr(value);
-      } else if (node.operator.is(TT.BAND_EQ)) {
-        value = data.value.band(value);
-      } else if (node.operator.is(TT.XOR_EQ)) {
-        value = data.value.xor(value);
-      } else if (node.operator.is(TT.BOR_EQ)) {
-        value = data.value.bor(value);
-      } else if (node.operator.is(TT.AND_EQ)) {
-        value = data.value.and(value);
-      } else if (node.operator.is(TT.OR_EQ)) {
-        value = data.value.or(value);
-      } else if (node.operator.is(TT.NULLISH_EQ)) {
-        value = data.value.nullishCoalescing(value);
+      // 后置运算
+      if (node.operator.isOr([TT.PPLUS, TT.MMINUS])) {
+        const oldValue = varSymbol.value;
+        const one = new IntValue(1);
+        const newValue = node.operator.is(TT.PPLUS)
+          ? varSymbol.value.add(one)
+          : varSymbol.value.sub(one);
+        varSymbol.value = newValue;
+
+        if (varSymbol.type !== BaseTypes.auto) {
+          const valueType: string = newValue.typeof();
+          if (valueType !== varSymbol.type && valueType !== BaseTypes.Null) {
+            throw `The ${valueType} type cannot be assigned to the ${varSymbol.type} type`;
+          }
+        }
+
+        return oldValue;
       }
 
-      if (data.type !== BaseTypes.auto) {
+      let value: BaseValue = this.visit(node.value, context);
+      if (node.operator.is(TT.PLUS_EQ)) {
+        value = varSymbol.value.add(value);
+      } else if (node.operator.is(TT.MINUS_EQ)) {
+        value = varSymbol.value.sub(value);
+      } else if (node.operator.is(TT.MUL_EQ)) {
+        value = varSymbol.value.mul(value);
+      } else if (node.operator.is(TT.DIV_EQ)) {
+        value = varSymbol.value.mul(value);
+      } else if (node.operator.is(TT.POW_EQ)) {
+        value = varSymbol.value.pow(value);
+      } else if (node.operator.is(TT.REMAINDER_EQ)) {
+        value = varSymbol.value.remainder(value);
+      } else if (node.operator.is(TT.SHL_EQ)) {
+        value = varSymbol.value.shl(value);
+      } else if (node.operator.is(TT.SHR_EQ)) {
+        value = varSymbol.value.shr(value);
+      } else if (node.operator.is(TT.BAND_EQ)) {
+        value = varSymbol.value.band(value);
+      } else if (node.operator.is(TT.XOR_EQ)) {
+        value = varSymbol.value.xor(value);
+      } else if (node.operator.is(TT.BOR_EQ)) {
+        value = varSymbol.value.bor(value);
+      } else if (node.operator.is(TT.AND_EQ)) {
+        value = varSymbol.value.and(value);
+      } else if (node.operator.is(TT.OR_EQ)) {
+        value = varSymbol.value.or(value);
+      } else if (node.operator.is(TT.NULLISH_EQ)) {
+        value = varSymbol.value.nullishCoalescing(value);
+      }
+
+      if (varSymbol.type !== BaseTypes.auto) {
         const valueType: string = value.typeof();
-        if (valueType !== data.type && valueType !== BaseTypes.Null) {
-          throw `The ${valueType} type cannot be assigned to the ${data.type} type`;
+        if (valueType !== varSymbol.type && valueType !== BaseTypes.Null) {
+          throw `The ${valueType} type cannot be assigned to the ${varSymbol.type} type`;
         }
       }
-      return (data.value = value);
+      return (varSymbol.value = value);
     } else {
       throw `${name} is not defined`;
     }
