@@ -31,6 +31,7 @@ export enum NT {
   BREAK,
   TEXT_SPAN,
   TERNARY,
+  LIST,
 }
 
 export abstract class BaseNode {
@@ -467,6 +468,19 @@ export class TernaryNode extends BaseNode {
     public thenNode: BaseNode,
     public elseNode: BaseNode
   ) {
+    super();
+  }
+}
+
+export class ListNode extends BaseNode {
+  toString(): string {
+    return `[${this.items.map((n) => n.toString()).toString()}]`;
+  }
+  id(): NT {
+    return NT.LIST;
+  }
+
+  constructor(public items: BaseNode[]) {
     super();
   }
 }

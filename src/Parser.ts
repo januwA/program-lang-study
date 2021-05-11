@@ -16,6 +16,7 @@ import {
   FunParam,
   HexNode,
   IfNode,
+  ListNode,
   MemberNode,
   NullNode,
   OctNode,
@@ -412,6 +413,9 @@ export class Parser {
     return new IfNode(cases, elseNode);
   }
 
+  /**
+   * 赋值表达式
+   */
   private varAssign(): BaseNode {
     // a = 1
     // a += 1
@@ -461,7 +465,10 @@ export class Parser {
     }
   }
 
-  // <condition> ? <binaryExpr> : <binaryExpr>
+  /**
+   * 三元表达式
+   * <condition> ? <binaryExpr> : <binaryExpr>
+   */
   private ternaryExpr(condition: BaseNode) {
     this.matchToken(TT.QMAKE);
     const thenNode = this.varAssign();
@@ -579,6 +586,8 @@ export class Parser {
       const _expr = this.varAssign();
       this.matchToken(TT.RPAREN);
       return _expr;
+    } else if (token.is(TT.LSQUARE)) {
+      return this.listExpr();
     } else {
       throw new SyntaxError(
         `Unexpected token '${token.value}'`,
@@ -586,5 +595,24 @@ export class Parser {
         token.posEnd
       ).toString();
     }
+  }
+
+  /**
+   * List 表达式 
+   */
+  listExpr(): BaseNode {
+    this.matchToken(TT.LSQUARE);
+    const items: BaseNode[] = [];
+    if (this.token.is(TT.RSQUARE)) {
+      this.next();
+    } else {
+      items.push(this.varAssign());
+      while (this.token.is(TT.COMMA)) {
+        this.next();
+        items.push(this.varAssign());
+      }
+      this.matchToken(TT.RSQUARE);
+    }
+    return new ListNode(items);
   }
 }

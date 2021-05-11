@@ -33,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(` 1 == 1 ? 1 : 2 `);
+// run(` [1, true ? 1 : 2] `);

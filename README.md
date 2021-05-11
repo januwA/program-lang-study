@@ -73,6 +73,13 @@ int add(const int a, const int b) {
 const fun a = add
 ```
 
+# List
+```
+[1,2]
+
+List arr = [1,2]
+```
+
 # Conversion
 ```
 (int)1.23  => 1

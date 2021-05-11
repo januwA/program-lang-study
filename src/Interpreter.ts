@@ -12,6 +12,7 @@ import {
   FunNode,
   HexNode,
   IfNode,
+  ListNode,
   MemberNode,
   NT,
   OctNode,
@@ -34,6 +35,7 @@ import {
   FloatValue,
   FunctionValue,
   IntValue,
+  ListValue,
   NullValue,
   StringValue,
 } from "./BaseValue";
@@ -133,9 +135,16 @@ export class Interpreter {
         return new NullValue();
       case NT.TERNARY:
         return this.visitTernary(node as TernaryNode, context);
+      case NT.LIST:
+        return this.visitList(node as ListNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+  
+  visitList(node: ListNode, context: Context): BaseValue {
+    const items = node.items.map((n) => this.visit(n, context));
+    return new ListValue(items);
   }
   visitTernary(node: TernaryNode, context: Context): BaseValue {
     if (this.visit(node.condition, context).isTren()) {

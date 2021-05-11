@@ -33,7 +33,7 @@ fun         : IDENTIFIER IDENTIFIER LPAREN ( (const)? IDENTIFIER IDENTIFIER (COM
 
 
 varAssign   : IDENTIFIER (EQ|operator_EQ) varAssign
-            : binaryExpr
+            : binaryExpr (QMAKE varAssign COLON varAssign)?
 
 binaryExpr  : (unaryExpr|call) (operator binaryExpr)*
 
@@ -45,5 +45,7 @@ unaryExpr   : (NOT|PLUS|MINUS|BNOT) binaryExpr
 call        : atom (LPAREN (binaryExpr (COMMA binaryExpr)* )? RPAREN)?
 
 
-atom        : DEC|HEX|OCT|BIN|FLOAT|STRING|IDENTIFIER|null|true|false
+atom        : DEC|HEX|OCT|BIN|FLOAT|STRING|IDENTIFIER|null|true|false|ListExpr
             : LPAREN variableAssign RPAREN
+
+ListExpr    : LSQUARE (varAssign (COMMA varAssign)*)? RSQUARE

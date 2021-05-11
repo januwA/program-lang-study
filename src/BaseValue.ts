@@ -145,12 +145,10 @@ export class IntValue extends BaseValue {
     throw new Error("IntValue ne.");
   }
   and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
+    return this.value ? other : this;
   }
   or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
+    return this.value ? this : other;
   }
   band(other: BaseValue): BaseValue {
     if (other instanceof IntValue || other instanceof FloatValue) {
@@ -303,12 +301,10 @@ export class FloatValue extends BaseValue {
     throw new Error("BaseValue ne.");
   }
   and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
+    return this.value ? other : this;
   }
   or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
+    return this.value ? this : other;
   }
   band(other: BaseValue): BaseValue {
     if (other instanceof IntValue || other instanceof FloatValue) {
@@ -426,12 +422,10 @@ export class BoolValue extends BaseValue {
     throw new Error("BoolValue ne.");
   }
   and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
+    return this.value ? other : this;
   }
   or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
+    return this.value ? this : other;
   }
   band(other: BaseValue): BaseValue {
     throw new Error("BoolValue band.");
@@ -623,12 +617,10 @@ export class StringValue extends BaseValue {
     throw new Error("Method not implemented.");
   }
   and(other: BaseValue): BaseValue {
-    if (this.value) return other;
-    else return this;
+    return this.value ? other : this;
   }
   or(other: BaseValue): BaseValue {
-    if (this.value) return this;
-    else return other;
+    return this.value ? this : other;
   }
   nullishCoalescing(other: BaseValue): BaseValue {
     return this;
@@ -730,13 +722,13 @@ export abstract class BaseFunctionValue extends BaseValue {
     throw new Error("Method not implemented.");
   }
   and(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
+    return other;
   }
   or(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
+    return this;
   }
   nullishCoalescing(other: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
+    return this;
   }
   lt(other: BaseValue): BoolValue {
     throw new Error("Method not implemented.");
@@ -881,5 +873,98 @@ export class BuiltInFunction extends BaseFunctionValue {
       },
       context
     );
+  }
+}
+
+export class ListValue extends BaseValue {
+  toString(): string {
+    return `[${this.items.map((v) => v.toString()).toString()}]`;
+  }
+  typeof(): string {
+    return BaseTypes.List;
+  }
+  not(): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  bnot(): IntValue {
+    throw new Error("Method not implemented.");
+  }
+  pow(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  add(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  sub(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  mul(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  div(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  remainder(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  band(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  bor(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  xor(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  shl(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  shr(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  and(other: BaseValue): BaseValue {
+    return other;
+  }
+  or(other: BaseValue): BaseValue {
+    return this;
+  }
+  nullishCoalescing(other: BaseValue): BaseValue {
+    return this;
+  }
+  lt(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  gt(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  lte(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  gte(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  ee(other: BaseValue): BoolValue {
+    return new BoolValue(this === other);
+  }
+  ne(other: BaseValue): BoolValue {
+    return new BoolValue(this !== other);
+  }
+  isTren(): boolean {
+    return false;
+  }
+  toInt(): IntValue {
+    throw new Error("Method not implemented.");
+  }
+  toFloat(): FloatValue {
+    throw new Error("Method not implemented.");
+  }
+  toStr(): StringValue {
+    return new StringValue(this.toString());
+  }
+  toBool(): BoolValue {
+    return new BoolValue(true);
+  }
+  constructor(public items: BaseValue[]) {
+    super();
   }
 }
