@@ -17,6 +17,7 @@ import {
   HexNode,
   IfNode,
   ListNode,
+  MapNode,
   MemberNode,
   NullNode,
   OctNode,
@@ -232,7 +233,7 @@ export class Parser {
           result = this.breakStatement();
           break;
         default:
-          result = this.varAssign();
+          result = this.assignExpr();
       }
     } else if (token.is(TT.IDENTIFIER)) {
       // a
@@ -241,18 +242,16 @@ export class Parser {
 
       const t: Token | null = this.peek(2);
       if (!t) {
-        result = this.varAssign();
+        result = this.assignExpr();
+      } else if (t.is(TT.EQ)) {
+        result = this.varDeclare();
+      } else if (t.is(TT.LPAREN)) {
+        result = this.fun();
       } else {
-        if (t.is(TT.EQ)) {
-          result = this.varDeclare();
-        } else if (t.is(TT.LPAREN)) {
-          result = this.fun();
-        } else {
-          result = this.varAssign();
-        }
+        result = this.assignExpr();
       }
     } else {
-      result = this.varAssign();
+      result = this.assignExpr();
     }
 
     while (this.token.is(TT.SEMICOLON)) {
@@ -287,7 +286,7 @@ export class Parser {
     } else if (this.token.is(TT.ARROW)) {
       // 箭头函数
       this.next();
-      body = this.varAssign();
+      body = this.assignExpr();
     }
     return new FunNode(retType.value, name, params, body);
   }
@@ -318,7 +317,7 @@ export class Parser {
 
     // ret
     // 1
-    if (retRow === valueToken.posStart.row) value = this.varAssign();
+    if (retRow === valueToken.posStart.row) value = this.assignExpr();
     return new RetNode(value);
   }
 
@@ -348,7 +347,7 @@ export class Parser {
     const type = this.matchToken(TT.IDENTIFIER);
     const name = this.matchToken(TT.IDENTIFIER);
     this.matchToken(TT.EQ);
-    const value = this.varAssign();
+    const value = this.assignExpr();
     return new VarDeclareNode(isConst, type, name, value);
   }
 
@@ -356,7 +355,7 @@ export class Parser {
     this.matchKeywordToken(Keyword.while);
 
     this.matchToken(TT.LPAREN);
-    const condition = this.varAssign();
+    const condition = this.assignExpr();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -369,10 +368,10 @@ export class Parser {
     const init = this.varDeclare();
     this.matchToken(TT.SEMICOLON);
 
-    const condition = this.varAssign();
+    const condition = this.assignExpr();
     this.matchToken(TT.SEMICOLON);
 
-    const step = this.varAssign();
+    const step = this.assignExpr();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -385,7 +384,7 @@ export class Parser {
     const cases: { condition: BaseNode; then: BaseNode }[] = [];
 
     this.matchToken(TT.LPAREN);
-    const condition = this.varAssign();
+    const condition = this.assignExpr();
     this.matchToken(TT.RPAREN);
     const thenNode = this.statement();
     cases.push({
@@ -396,7 +395,7 @@ export class Parser {
     while (this.token.value === Keyword.elif) {
       this.next();
       this.matchToken(TT.LPAREN);
-      const condition = this.varAssign();
+      const condition = this.assignExpr();
       this.matchToken(TT.RPAREN);
       const thenNode = this.statement();
       cases.push({
@@ -416,7 +415,7 @@ export class Parser {
   /**
    * 赋值表达式
    */
-  private varAssign(): BaseNode {
+  private assignExpr(): BaseNode {
     // a = 1
     // a += 1
     const name = this.token;
@@ -444,7 +443,7 @@ export class Parser {
         this.next();
         const operator = this.token;
         this.next();
-        const value = this.varAssign();
+        const value = this.assignExpr();
         return new VarAssignNode(name, operator, value);
       } else if (t1.isOr([TT.PPLUS, TT.MMINUS])) {
         this.next();
@@ -471,9 +470,9 @@ export class Parser {
    */
   private ternaryExpr(condition: BaseNode) {
     this.matchToken(TT.QMAKE);
-    const thenNode = this.varAssign();
+    const thenNode = this.assignExpr();
     this.matchToken(TT.COLON);
-    const elseNode = this.varAssign();
+    const elseNode = this.assignExpr();
     return new TernaryNode(condition, thenNode, elseNode);
   }
 
@@ -562,7 +561,7 @@ export class Parser {
       this.next();
       const nodes: BaseNode[] = [];
       while (!this.token.is(TT.RSPAN)) {
-        nodes.push(this.varAssign());
+        nodes.push(this.assignExpr());
       }
       this.next();
       return new TextSpanNode(nodes);
@@ -574,6 +573,8 @@ export class Parser {
         case Keyword.null:
           this.next();
           return new NullNode(token);
+        case Keyword.map:
+          return this.mapExpr();
         case Keyword.true:
         case Keyword.false:
           this.next();
@@ -583,7 +584,7 @@ export class Parser {
       }
     } else if (token.is(TT.LPAREN)) {
       this.next();
-      const _expr = this.varAssign();
+      const _expr = this.assignExpr();
       this.matchToken(TT.RPAREN);
       return _expr;
     } else if (token.is(TT.LSQUARE)) {
@@ -598,7 +599,7 @@ export class Parser {
   }
 
   /**
-   * List 表达式 
+   * List 表达式
    */
   listExpr(): BaseNode {
     this.matchToken(TT.LSQUARE);
@@ -606,13 +607,40 @@ export class Parser {
     if (this.token.is(TT.RSQUARE)) {
       this.next();
     } else {
-      items.push(this.varAssign());
+      items.push(this.assignExpr());
       while (this.token.is(TT.COMMA)) {
         this.next();
-        items.push(this.varAssign());
+        items.push(this.assignExpr());
       }
       this.matchToken(TT.RSQUARE);
     }
     return new ListNode(items);
+  }
+
+  /**
+   * Map 表达式
+   */
+  mapExpr(): BaseNode {
+    this.matchKeywordToken(Keyword.map);
+    this.matchToken(TT.LBLOCK);
+
+    const map: { key: BaseNode; value: BaseNode }[] = [];
+    if (this.token.is(TT.RBLOCK)) {
+      this.next();
+    } else {
+      let key: BaseNode, value: BaseNode;
+      while (!this.token.is(TT.RBLOCK)) {
+        key = this.assignExpr();
+        this.matchToken(TT.COLON);
+        value = this.assignExpr();
+        if (!this.token.is(TT.RBLOCK)) {
+          this.matchToken(TT.COMMA);
+        }
+        map.push({ key, value });
+      }
+      this.next();
+    }
+
+    return new MapNode(map);
   }
 }

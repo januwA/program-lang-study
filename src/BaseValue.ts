@@ -968,3 +968,101 @@ export class ListValue extends BaseValue {
     super();
   }
 }
+
+export class MapValue extends BaseValue {
+  toString(): string {
+    let str = '';
+    for (const it of this.map) {
+      str += `${it.key.toString()}:${it.value.toString()},`;
+    }
+    return `map {${str}}`
+  }
+  typeof(): string {
+    return BaseTypes.Map;
+  }
+  not(): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  bnot(): IntValue {
+    throw new Error("Method not implemented.");
+  }
+  pow(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  add(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  sub(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  mul(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  div(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  remainder(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  band(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  bor(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  xor(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  shl(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  shr(other: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  and(other: BaseValue): BaseValue {
+    return other;
+  }
+  or(other: BaseValue): BaseValue {
+    return this;
+  }
+  nullishCoalescing(other: BaseValue): BaseValue {
+    return this;
+  }
+  lt(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  gt(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  lte(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  gte(other: BaseValue): BoolValue {
+    throw new Error("Method not implemented.");
+  }
+  ee(other: BaseValue): BoolValue {
+    return new BoolValue(this === other);
+  }
+  ne(other: BaseValue): BoolValue {
+    return new BoolValue(this !== other);
+  }
+  isTren(): boolean {
+    return true;
+  }
+  toInt(): IntValue {
+    throw new Error("Method not implemented.");
+  }
+  toFloat(): FloatValue {
+    throw new Error("Method not implemented.");
+  }
+  toStr(): StringValue {
+    return new StringValue(this.toString())
+  }
+  toBool(): BoolValue {
+    return new BoolValue(true);
+  }
+
+  constructor(public map: {key: BaseValue, value: BaseValue}[]) {
+    super();
+  }
+}

@@ -80,6 +80,13 @@ const fun a = add
 List arr = [1,2]
 ```
 
+# Map
+```
+map { "key": "value" }
+
+Map a = map { "key": "value" }
+```
+
 # Conversion
 ```
 (int)1.23  => 1

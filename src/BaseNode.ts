@@ -32,6 +32,7 @@ export enum NT {
   TEXT_SPAN,
   TERNARY,
   LIST,
+  MAP,
 }
 
 export abstract class BaseNode {
@@ -481,6 +482,23 @@ export class ListNode extends BaseNode {
   }
 
   constructor(public items: BaseNode[]) {
+    super();
+  }
+}
+
+export class MapNode extends BaseNode {
+  toString(): string {
+    let str = "";
+    for (const it of this.map) {
+      str += `${it.key.toString()}:${it.value.toString()},`;
+    }
+    return `{}`;
+  }
+  id(): NT {
+    return NT.MAP;
+  }
+
+  constructor(public map: { key: BaseNode; value: BaseNode }[]) {
     super();
   }
 }

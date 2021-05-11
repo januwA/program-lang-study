@@ -12,6 +12,7 @@ export enum Keyword {
   continue = "continue",
   break = "break",
   jmp = "jmp",
+  map = "map",
 }
 
 export const KEYWORDS: string[] = [
@@ -28,4 +29,5 @@ export const KEYWORDS: string[] = [
   Keyword.continue,
   Keyword.break,
   Keyword.jmp,
+  Keyword.map,
 ];

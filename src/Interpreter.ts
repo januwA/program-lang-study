@@ -13,6 +13,7 @@ import {
   HexNode,
   IfNode,
   ListNode,
+  MapNode,
   MemberNode,
   NT,
   OctNode,
@@ -36,6 +37,7 @@ import {
   FunctionValue,
   IntValue,
   ListValue,
+  MapValue,
   NullValue,
   StringValue,
 } from "./BaseValue";
@@ -137,11 +139,22 @@ export class Interpreter {
         return this.visitTernary(node as TernaryNode, context);
       case NT.LIST:
         return this.visitList(node as ListNode, context);
+      case NT.MAP:
+        return this.visitMap(node as MapNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
   }
-  
+  visitMap(node: MapNode, context: Context): BaseValue {
+    const map: { key: BaseValue; value: BaseValue }[] = node.map.map(
+      (it: { key: BaseNode; value: BaseNode }) => ({
+        key: this.visit(it.key, context),
+        value: this.visit(it.value, context),
+      })
+    );
+    return new MapValue(map);
+  }
+
   visitList(node: ListNode, context: Context): BaseValue {
     const items = node.items.map((n) => this.visit(n, context));
     return new ListValue(items);
