@@ -37,6 +37,7 @@ import {
   StringValue,
 } from "./BaseValue";
 import { BaseTypes } from "./BaseTypes";
+import { Keyword } from "./Keywords";
 
 /**
  * 解析语法树
@@ -393,10 +394,6 @@ export class Interpreter {
     }
   }
 
-  visitBool(node: BoolNode): BaseValue {
-    return new BoolValue(node.token.value === "true");
-  }
-
   visitUnary(node: UnaryNode, context: Context) {
     switch (node.token.type) {
       case TT.MINUS:
@@ -407,6 +404,25 @@ export class Interpreter {
         return this.visit(node.node, context).not();
       case TT.BNOT:
         return this.visit(node.node, context).bnot();
+      case TT.PPLUS:
+      case TT.MMINUS:
+        if (node.node.id() !== NT.VarAccess) {
+          throw `Invalid left-hand side expression in prefix operation`;
+        }
+
+        const varAccessNode = node.node as VarAccessNode;
+        const name = varAccessNode.name.value;
+        if (context.hasVariable(name)) {
+          const varSymbol = context.getVariable(name);
+          const one = new IntValue(1);
+          varSymbol.value = node.token.is(TT.PPLUS)
+            ? varSymbol.value.add(one)
+            : varSymbol.value.sub(one);
+          return varSymbol.value;
+        } else {
+          throw `${name} is not defined`;
+        }
+
       case TT.IDENTIFIER: {
         switch (node.token.value) {
           case BaseTypes.int:
@@ -473,6 +489,10 @@ export class Interpreter {
       default:
         break;
     }
+  }
+
+  visitBool(node: BoolNode): BaseValue {
+    return new BoolValue(node.token.value === Keyword.true);
   }
 
   visitNull(): BaseValue {

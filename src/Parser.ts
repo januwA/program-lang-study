@@ -163,7 +163,7 @@ export class Parser {
   }
 
   private getUnaryOperatorPrecedence(token: Token): number {
-    if (token.isOr([TT.NOT, TT.PLUS, TT.MINUS, TT.BNOT])) {
+    if (token.isOr([TT.NOT, TT.PLUS, TT.MINUS, TT.BNOT, TT.PPLUS, TT.MMINUS])) {
       return 17;
     }
 

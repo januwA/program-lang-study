@@ -28,7 +28,7 @@ export function run(text: string): BaseValue {
 
   const parser = new Parser(tokens);
   let ast: BaseNode = parser.parse();
-  // console.log( ast.toString() );
+  // console.log( ast );
 
   const interpreter = new Interpreter();
   try {
