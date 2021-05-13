@@ -45,9 +45,18 @@ export abstract class BaseValue {
   abstract toFloat(): FloatValue;
   abstract toStr(): StringValue;
   abstract toBool(): BoolValue;
+
+  abstract atIndex(index: BaseValue): BaseValue;
+  abstract atKey(key: BaseValue): BaseValue;
 }
 
 export class IntValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toStr(): StringValue {
     return new StringValue(this.toString());
   }
@@ -210,6 +219,12 @@ export class IntValue extends BaseValue {
 }
 
 export class FloatValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toStr(): StringValue {
     return new StringValue(this.toString());
   }
@@ -358,6 +373,12 @@ export class FloatValue extends BaseValue {
 }
 
 export class BoolValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toStr(): StringValue {
     return new StringValue(this.toString());
   }
@@ -457,6 +478,12 @@ export class BoolValue extends BaseValue {
 }
 
 export class NullValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toStr(): StringValue {
     return new StringValue(this.toString());
   }
@@ -555,6 +582,18 @@ export class NullValue extends BaseValue {
 }
 
 export class StringValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    if (index instanceof IntValue) {
+      return new StringValue(this.value[index.value]);
+    }
+
+    if (index instanceof StringValue) {
+      return new StringValue(this.value[index.value]);
+    }
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toStr(): StringValue {
     return new StringValue(this.value);
   }
@@ -783,6 +822,12 @@ export abstract class BaseFunctionValue extends BaseValue {
 }
 
 export class FunctionValue extends BaseFunctionValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   constructor(
     returnType: string,
     name: string,
@@ -818,6 +863,12 @@ export class FunctionValue extends BaseFunctionValue {
 }
 
 export class BuiltInFunction extends BaseFunctionValue {
+  atIndex(index: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   constructor(
     returnType: string,
     name: string,
@@ -877,6 +928,18 @@ export class BuiltInFunction extends BaseFunctionValue {
 }
 
 export class ListValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    if (index instanceof IntValue) {
+      return this.items[index.value];
+    }
+
+    if (index instanceof StringValue) {
+      return this.items[index.value];
+    }
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toString(): string {
     return `[${this.items.map((v) => v.toString()).toString()}]`;
   }
@@ -970,12 +1033,23 @@ export class ListValue extends BaseValue {
 }
 
 export class MapValue extends BaseValue {
+  atIndex(index: BaseValue): BaseValue {
+    for (const it of this.map) {
+      if (it.key.ee(index)) {
+        return it.value;
+      }
+    }
+    return new NullValue();
+  }
+  atKey(key: BaseValue): BaseValue {
+    throw new Error("Method not implemented.");
+  }
   toString(): string {
-    let str = '';
+    let str = "";
     for (const it of this.map) {
       str += `${it.key.toString()}:${it.value.toString()},`;
     }
-    return `map {${str}}`
+    return `map {${str}}`;
   }
   typeof(): string {
     return BaseTypes.Map;
@@ -1056,13 +1130,13 @@ export class MapValue extends BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
-    return new StringValue(this.toString())
+    return new StringValue(this.toString());
   }
   toBool(): BoolValue {
     return new BoolValue(true);
   }
 
-  constructor(public map: {key: BaseValue, value: BaseValue}[]) {
+  constructor(public map: { key: BaseValue; value: BaseValue }[]) {
     super();
   }
 }

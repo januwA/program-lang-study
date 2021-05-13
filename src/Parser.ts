@@ -1,5 +1,6 @@
 import { SyntaxError } from "./BaseError";
 import {
+  AtIndexNode,
   BaseNode,
   BinaryNode,
   BinNode,
@@ -483,13 +484,18 @@ export class Parser {
     if (unaryPrecedence !== 0 && unaryPrecedence >= parentPrecedence) {
       left = this.unaryExpr(unaryPrecedence);
     } else {
-      const atom = this.atom();
+      left = this.atom();
 
       if (this.token.is(TT.LPAREN)) {
         // a()
-        left = this.call(atom);
-      } else {
-        left = atom;
+        while (this.token.is(TT.LPAREN)) {
+          left = this.call(left);
+        }
+      } else if (this.token.is(TT.LSQUARE)) {
+        // a[ 1 ]
+        while (this.token.is(TT.LSQUARE)) {
+          left = this.atIndex(left);
+        }
       }
     }
 
@@ -505,7 +511,7 @@ export class Parser {
     return left;
   }
 
-  private call(atom: BaseNode) {
+  private call(name: BaseNode): BaseNode {
     this.matchToken(TT.LPAREN);
     const args: BaseNode[] = [];
     if (this.token.is(TT.RPAREN)) {
@@ -519,7 +525,14 @@ export class Parser {
       this.matchToken(TT.RPAREN);
     }
 
-    return new CallNode(atom, args);
+    return new CallNode(name, args);
+  }
+
+  private atIndex(left: BaseNode): BaseNode {
+    this.matchToken(TT.LSQUARE);
+    const index = this.assignExpr();
+    this.matchToken(TT.RSQUARE);
+    return new AtIndexNode(left, index);
   }
 
   private unaryExpr(unaryPrecedence: number): BaseNode {

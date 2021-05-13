@@ -18,5 +18,4 @@ fun f1(int a) {
   ret add;
 }
 
-fun add = f1(1)
-print( add(2) ); // 4
+print( f1(1)(2) ); // 4
