@@ -153,4 +153,7 @@ while(true) {
 
 // map
 map { "name": "Ajanuw" }["name"]  => "Ajanuw"
+
+List add() => [1];
+[add][0]()[0]       => 1
 ```

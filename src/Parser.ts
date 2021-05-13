@@ -485,18 +485,7 @@ export class Parser {
       left = this.unaryExpr(unaryPrecedence);
     } else {
       left = this.atom();
-
-      if (this.token.is(TT.LPAREN)) {
-        // a()
-        while (this.token.is(TT.LPAREN)) {
-          left = this.call(left);
-        }
-      } else if (this.token.is(TT.LSQUARE)) {
-        // a[ 1 ]
-        while (this.token.is(TT.LSQUARE)) {
-          left = this.atIndex(left);
-        }
-      }
+      left = this.propExpr(left);
     }
 
     while (true) {
@@ -509,6 +498,23 @@ export class Parser {
       left = new BinaryNode(left, operator, right);
     }
     return left;
+  }
+
+  private propExpr(left: BaseNode): BaseNode {
+    let change: boolean = false;
+    // a()
+    while (this.token.is(TT.LPAREN)) {
+      change = true;
+      left = this.call(left);
+    }
+
+    // a[ 1 ]
+    while (this.token.is(TT.LSQUARE)) {
+      change = true;
+      left = this.atIndex(left);
+    }
+
+    return change ? this.propExpr(left) : left;
   }
 
   private call(name: BaseNode): BaseNode {
