@@ -47,14 +47,14 @@ export abstract class BaseValue {
   abstract toBool(): BoolValue;
 
   abstract atIndex(index: BaseValue): BaseValue;
-  abstract atKey(key: BaseValue): BaseValue;
+  abstract atKey(key: string): BaseValue;
 }
 
 export class IntValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
@@ -222,7 +222,7 @@ export class FloatValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
@@ -376,7 +376,7 @@ export class BoolValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
@@ -481,7 +481,7 @@ export class NullValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
@@ -591,7 +591,7 @@ export class StringValue extends BaseValue {
       return new StringValue(this.value[index.value]);
     }
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toStr(): StringValue {
@@ -825,7 +825,7 @@ export class FunctionValue extends BaseFunctionValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   constructor(
@@ -866,7 +866,7 @@ export class BuiltInFunction extends BaseFunctionValue {
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   constructor(
@@ -937,7 +937,7 @@ export class ListValue extends BaseValue {
       return this.items[index.value];
     }
   }
-  atKey(key: BaseValue): BaseValue {
+  atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
   toString(): string {
@@ -1041,8 +1041,13 @@ export class MapValue extends BaseValue {
     }
     return new NullValue();
   }
-  atKey(key: BaseValue): BaseValue {
-    throw new Error("Method not implemented.");
+  atKey(key: string): BaseValue {
+    for (const it of this.map) {
+      if (it.key.toStr().value === key) {
+        return it.value;
+      }
+    }
+    return new NullValue();
   }
   toString(): string {
     let str = "";

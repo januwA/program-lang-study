@@ -20,6 +20,7 @@ export enum TT {
   COMMA = "COMMA", // ,
   ARROW = "ARROW", // =>
   COMMENT = "COMMENT", // 注释
+  DOT = "DOT", // .
 
   LSPAN = "LSPAN",
   RSPAN = "RSPAN",

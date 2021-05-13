@@ -1,6 +1,7 @@
 import { Context, VariableSymbol } from "./Context";
 import {
   AtIndexNode,
+  AtKeyNode,
   BinaryNode,
   BinNode,
   BlockNode,
@@ -142,11 +143,16 @@ export class Interpreter {
         return this.visitList(node as ListNode, context);
       case NT.MAP:
         return this.visitMap(node as MapNode, context);
-      case NT.INDEX:
+      case NT.AT_INDEX:
         return this.visitAtIndex(node as AtIndexNode, context);
+      case NT.AT_KEY:
+        return this.visitAtKey(node as AtKeyNode, context);
       default:
         throw `Runtime Error: Unrecognized node ${node}`;
     }
+  }
+  visitAtKey(node: AtKeyNode, context: Context): BaseValue {
+    return this.visit(node.left, context).atKey( node.key.value );
   }
   visitAtIndex(node: AtIndexNode, context: Context): BaseValue {
     return this.visit(node.left, context).atIndex(

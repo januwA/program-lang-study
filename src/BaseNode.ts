@@ -33,7 +33,8 @@ export enum NT {
   TERNARY,
   LIST,
   MAP,
-  INDEX
+  AT_INDEX,
+  AT_KEY
 }
 
 export abstract class BaseNode {
@@ -512,10 +513,28 @@ export class AtIndexNode extends BaseNode {
     return `${this.left.toString()}[${this.index.toString()}]`;
   }
   id(): NT {
-    return NT.INDEX;
+    return NT.AT_INDEX;
   }
 
   constructor(public left: BaseNode, public index: BaseNode) {
+    super();
+  }
+}
+
+/**
+ * a.name
+ * a.name ()
+ * a.name []
+ */
+ export class AtKeyNode extends BaseNode {
+  toString(): string {
+    return `${this.left.toString()}.${this.key.value}`;
+  }
+  id(): NT {
+    return NT.AT_KEY;
+  }
+
+  constructor(public left: BaseNode, public key: Token) {
     super();
   }
 }

@@ -157,3 +157,10 @@ map { "name": "Ajanuw" }["name"]  => "Ajanuw"
 List add() => [1];
 [add][0]()[0]       => 1
 ```
+
+## AtKey
+```
+(map { 'name': "ajanuw" }).name   => "ajanuw"
+
+(map { 'name': "ajanuw", 'lst': [1] }).lst[0]   => 1
+```

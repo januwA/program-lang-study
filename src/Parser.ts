@@ -1,6 +1,7 @@
 import { SyntaxError } from "./BaseError";
 import {
   AtIndexNode,
+  AtKeyNode,
   BaseNode,
   BinaryNode,
   BinNode,
@@ -514,7 +515,18 @@ export class Parser {
       left = this.atIndex(left);
     }
 
+    while (this.token.is(TT.DOT)) {
+      change = true;
+      left = this.atKey(left);
+    }
+
     return change ? this.propExpr(left) : left;
+  }
+
+  private atKey(left: BaseNode): BaseNode {
+    this.matchToken(TT.DOT);
+    const key = this.matchToken(TT.IDENTIFIER);
+    return new AtKeyNode(left, key);
   }
 
   private call(name: BaseNode): BaseNode {

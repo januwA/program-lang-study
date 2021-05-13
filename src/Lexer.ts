@@ -5,7 +5,8 @@ import { Token, TT } from "./Token";
 
 const DEC_EXP = /[\d\.]/;
 const NUMBER_EXP = /[a-f\d\._]/i;
-const IDENT_EXP = /\w/; // [A-Za-z0-9_]
+const IDENT_EXP = /[a-z_]/i;
+const IDENT_BODY_EXP = /\w/;
 
 const escapeCaracters = {
   n: "\n",
@@ -51,7 +52,7 @@ export class Lexer {
     if (IDENT_EXP.test(this.c)) {
       let type = TT.IDENTIFIER;
       let val: string = "";
-      while (IDENT_EXP.test(this.c)) {
+      while (IDENT_BODY_EXP.test(this.c)) {
         val += this.c;
         this.next();
       }
@@ -424,6 +425,23 @@ export class Lexer {
 
     let val: string = "";
     let isFloat = false;
+
+    // check .23 0r .name
+    if (this.c === ".") {
+      val += ".";
+      this.next();
+      if (/\d/.test(this.c)) {
+        type = TT.FLOAT;
+        while (/\d/.test(this.c)) {
+          val += this.c;
+          this.next();
+        }
+        return new Token(type, val, posStart, this.pos);
+      } else {
+        type = TT.DOT;
+        return new Token(type, val, posStart, this.pos);
+      }
+    }
 
     if (this.c === "0") {
       val += this.c;
