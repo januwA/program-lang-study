@@ -43,6 +43,17 @@ a = 2
 
 int a = 1
 a = 1.2 // error
+
+int a = 1,b = 2, c= 3;
+a => 1
+b => 1
+c => 1
+
+
+int a,b,c = 1;
+a => null
+b => null
+c => 1
 ```
 
 # constant

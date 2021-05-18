@@ -33,4 +33,4 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(`[1,2,3]`);
+// run(`int a = 1, b = 2;`);

@@ -139,7 +139,7 @@ export class UnaryNode extends BaseNode {
   constructor(
     public op: Token,
     public node: BaseNode,
-    public postOp: boolean = false, // 后置运算(先返回值，在运算)
+    public postOp: boolean = false // 后置运算(先返回值，在运算)
   ) {
     super();
   }
@@ -211,13 +211,18 @@ export class VarDeclareNode extends BaseNode {
     return NT.VarDeclare;
   }
   toString(): string {
-    return `(${this.type.value} ${this.name.value} = ${this.value.toString()})`;
+    let str = `${this.isConst ? "const" : ""} ${this.type.value}`;
+    for (const it of this.items) {
+      str += it.value
+        ? `${it.name.value} = ${it.value.toString()}`
+        : `${it.name.value}`;
+    }
+    return str;
   }
   constructor(
     public isConst: boolean,
     public type: Token,
-    public name: Token,
-    public value: BaseNode
+    public items: { name: Token; value: BaseNode | null }[]
   ) {
     super();
   }

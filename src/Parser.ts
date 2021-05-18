@@ -36,6 +36,7 @@ import { KEYWORDS, Keyword } from "./Keywords";
 import { Token, TT } from "./Token";
 
 export const INVALID_BINARY_OP = -1;
+export const SKIP_COMMA_PRECEDENCE = 1;
 
 /**
  * 将token表解析为AST语法树
@@ -242,21 +243,10 @@ export class Parser {
         default:
           result = this.expr();
       }
-    } else if (token.is(TT.IDENTIFIER)) {
-      // a
+    } else if (token.is(TT.IDENTIFIER) && this.peek(1)?.is(TT.IDENTIFIER)) {
       // int a = 1
       // int add() => 1
-
-      const t: Token | null = this.peek(2);
-      if (!t) {
-        result = this.expr();
-      } else if (t.is(TT.EQ)) {
-        result = this.varDeclare();
-      } else if (t.is(TT.LPAREN)) {
-        result = this.fun();
-      } else {
-        result = this.expr();
-      }
+      result = this.peek(2)?.is(TT.LPAREN) ? this.fun() : this.varDeclare();
     } else {
       result = this.expr();
     }
@@ -266,7 +256,7 @@ export class Parser {
   }
 
   private fun(): BaseNode {
-    const retType = this.matchToken(TT.IDENTIFIER);
+    const type = this.matchToken(TT.IDENTIFIER);
     const name = this.matchToken(TT.IDENTIFIER);
     const params: FunParam[] = [];
     this.matchToken(TT.LPAREN);
@@ -292,7 +282,7 @@ export class Parser {
       this.next();
       body = this.expr();
     }
-    return new FunNode(retType.value, name, params, body);
+    return new FunNode(type.value, name, params, body);
   }
 
   private _getFunParamItem(): FunParam {
@@ -348,11 +338,35 @@ export class Parser {
 
   private varDeclare(isConst = false): BaseNode {
     // auto a = 1
+    // auto a = 1, b = 2;
+    // auto a,b,c;
+    // https://en.wikipedia.org/wiki/Comma_operator
     const type = this.matchToken(TT.IDENTIFIER);
-    const name = this.matchToken(TT.IDENTIFIER);
-    this.matchToken(TT.EQ);
-    const value = this.expr();
-    return new VarDeclareNode(isConst, type, name, value);
+
+    const items: { name: Token; value: BaseNode | null }[] = [];
+
+    let name = this.matchToken(TT.IDENTIFIER);
+    let value = null;
+
+    if (this.token.is(TT.EQ)) {
+      this.next();
+      value = this.expr(SKIP_COMMA_PRECEDENCE);
+    }
+    items.push({ name, value });
+
+    while (this.token.is(TT.COMMA)) {
+      this.next();
+      name = this.matchToken(TT.IDENTIFIER);
+      if (this.token.is(TT.EQ)) {
+        this.next();
+        value = this.expr(SKIP_COMMA_PRECEDENCE);
+      } else {
+        value = null;
+      }
+      items.push({ name, value });
+    }
+
+    return new VarDeclareNode(isConst, type, items);
   }
 
   private whileStatement(): BaseNode {
@@ -645,12 +659,10 @@ export class Parser {
 
   private _itemExpres(items: BaseNode[]): BaseNode[] {
     // 传入1跳过 COMMA 二元表达式
-    const skipCommaOpPrecedence = 1;
-
-    items.push(this.expr(skipCommaOpPrecedence));
+    items.push(this.expr(SKIP_COMMA_PRECEDENCE));
     while (this.token.is(TT.COMMA)) {
       this.next();
-      items.push(this.expr(skipCommaOpPrecedence));
+      items.push(this.expr(SKIP_COMMA_PRECEDENCE));
     }
     return items;
   }

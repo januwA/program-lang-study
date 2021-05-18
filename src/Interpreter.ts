@@ -413,28 +413,38 @@ export class Interpreter {
 
   // 定义变量
   visitVarDeclare(node: VarDeclareNode, context: Context): BaseValue {
-    const name: string = node.name.value;
     const type: string = node.type.value;
-    if (context.canDeclareVariable(name)) {
-      const value: BaseValue = this.visit(node.value, context);
 
-      // check type
-      if (type !== BaseTypes.auto) {
+    for (const it of node.items) {
+      const name: string = it.name.value;
+      if (context.canDeclareVariable(name)) {
+        const value: BaseValue = it.value
+          ? this.visit(it.value, context)
+          : new NullValue();
+
+        // check type
+        // auto 能设置任意属性的value
+        // null 能设置给任何变量
         const valueType: string = value.typeof();
-        if (valueType !== type && valueType !== BaseTypes.Null) {
-          throw `The ${valueType} type cannot be assigned to the ${node.type.value} type`;
+        if (
+          type !== BaseTypes.auto &&
+          valueType !== BaseTypes.Null &&
+          valueType !== type
+        ) {
+          throw `The ${valueType} type cannot be assigned to the ${type} type`;
         }
-      }
 
-      context.declareVariable(
-        name,
-        new VariableSymbol(node.isConst, node.type.value, value)
-      );
-      return new NullValue();
-    } else {
-      // 当前作用域内，不能再次定义
-      throw `Identifier '${name}' has already been declared`;
+        context.declareVariable(
+          name,
+          new VariableSymbol(node.isConst, type, value)
+        );
+      } else {
+        // 当前作用域内，不能再次定义
+        throw `Identifier '${name}' has already been declared`;
+      }
     }
+    
+    return new NullValue();
   }
 
   visitUnary(node: UnaryNode, context: Context) {
