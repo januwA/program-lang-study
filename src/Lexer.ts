@@ -34,45 +34,36 @@ export class Lexer {
     const tokens: Token[] = [];
     while (this.c !== "\0") {
       if (this.c === "$") {
-        this.makeTextSpan(tokens);
+        this.mkTextSpan(tokens);
       } else {
         tokens.push(this.nextToken());
       }
     }
-    tokens.push(new Token(TT.EOF, "EOF", this.pos));
     return tokens;
   }
 
   nextToken(): Token {
-    const posStart: Position = this.pos.copy();
     if (DEC_EXP.test(this.c)) {
-      return this.makeNumber();
+      return this.mkNumber();
     }
 
     if (IDENT_EXP.test(this.c)) {
-      let type = TT.IDENTIFIER;
-      let val: string = "";
-      while (IDENT_BODY_EXP.test(this.c)) {
-        val += this.c;
-        this.next();
-      }
-
-      if (KEYWORDS.includes(val)) type = TT.KEYWORD;
-      return new Token(type, val, posStart, this.pos);
+      return this.mkIdent();
     }
 
+    const posStart: Position = this.pos.copy();
     switch (this.c) {
+      case "\0":
+        return new Token(TT.EOF, "EOF", this.pos);
+
       case " ":
       case "\t":
       case "\r":
       case "\n":
-        return this.makeSpace();
-      case '"': {
-        return this.makeString('"');
-      }
-      case "'": {
-        return this.makeString("'");
-      }
+        return this.eatSpace();
+      case '"':
+      case "'":
+        return this.mkString(this.c);
       case ";": {
         this.next();
         return new Token(TT.SEMICOLON, ";", posStart);
@@ -160,32 +151,9 @@ export class Lexer {
           this.next();
           return new Token(TT.DIV_EQ, "/=", posStart, this.pos);
         } else if ((this.c as string) === "/") {
-          this.next();
-          let val = "";
-          while (
-            (this.c as string) !== "\n" &&
-            (this.c as string) !== "\r" &&
-            (this.c as string) !== "\0"
-          ) {
-            val += this.c;
-            this.next();
-          }
-          return new Token(TT.COMMENT, val, posStart, this.pos);
+          return this.eatSLComment();
         } else if ((this.c as string) === "*") {
-          this.next();
-          let val = "";
-          while (true) {
-            if ((this.c as string) === "*") {
-              this.next();
-              if ((this.c as string) === "/") {
-                this.next();
-                break;
-              }
-            }
-            val += this.c;
-            this.next();
-          }
-          return new Token(TT.COMMENT, val, posStart, this.pos);
+          return this.eatMLComment();
         } else {
           return new Token(TT.DIV, "/", posStart);
         }
@@ -323,7 +291,20 @@ export class Lexer {
     }
   }
 
-  makeTextSpan(tokens: Token[]) {
+  mkIdent(): Token {
+    const posStart: Position = this.pos.copy();
+    let type = TT.IDENTIFIER;
+    let val: string = "";
+    while (IDENT_BODY_EXP.test(this.c)) {
+      val += this.c;
+      this.next();
+    }
+
+    if (KEYWORDS.includes(val)) type = TT.KEYWORD;
+    return new Token(type, val, posStart, this.pos);
+  }
+
+  mkTextSpan(tokens: Token[]) {
     let posStart = this.pos.copy();
     tokens.push(new Token(TT.LSPAN, "LSPAN", this.pos));
 
@@ -391,7 +372,7 @@ export class Lexer {
     this.next();
   }
 
-  makeString(c: string): Token {
+  mkString(c: string): Token {
     const posStart = this.pos.copy();
     let val = "";
     let escapeCharacter = false;
@@ -419,7 +400,7 @@ export class Lexer {
    * number 语法
    * https://www.nasm.us/xdoc/2.15.05/html/nasmdoc3.html#section-3.2#section-3.4.1
    */
-  private makeNumber(): Token {
+  private mkNumber(): Token {
     const posStart = this.pos.copy();
     let type = TT.DEC;
 
@@ -502,18 +483,44 @@ export class Lexer {
     return new Token(type, val, posStart, this.pos);
   }
 
-  private makeSpace(): Token {
-    const posStart = this.pos.copy();
-    let val: string = "";
+  private eatSpace(): Token {
     while (
       this.c === " " ||
       this.c === "\t" ||
       this.c === "\r" ||
       this.c === "\n"
     ) {
-      val += this.c;
       this.next();
     }
-    return new Token(TT.SPACE, val, posStart, this.pos);
+    return this.nextToken();
+  }
+
+  // 吃掉单行注释
+  private eatSLComment(): Token {
+    this.next();
+    while (
+      (this.c as string) !== "\n" &&
+      (this.c as string) !== "\r" &&
+      (this.c as string) !== "\0"
+    ) {
+      this.next();
+    }
+    this.next();
+    return this.nextToken();
+  }
+  // 吃掉多行注释
+  private eatMLComment(): Token {
+    this.next();
+    while (this.c !== "\0") {
+      if ((this.c as string) === "*") {
+        this.next();
+        if ((this.c as string) === "/") {
+          this.next();
+          break;
+        }
+      }
+      this.next();
+    }
+    return this.nextToken();
   }
 }

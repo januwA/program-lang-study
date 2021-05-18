@@ -20,11 +20,9 @@ globalContext.declareVariable(
 
 export function run(text: string): BaseValue {
   const lexer = new Lexer(text);
-  const tokens: Token[] = lexer
-    .makeTokens()
-    .filter((t) => t.type !== TT.SPACE)
-    .filter((t) => t.type !== TT.COMMENT);
+  const tokens: Token[] = lexer.makeTokens();
   // console.log(tokens.map((it) => it.toString()));
+  
 
   const parser = new Parser(tokens);
   let ast: BaseNode = parser.parse();

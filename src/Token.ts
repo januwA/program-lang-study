@@ -7,7 +7,6 @@ export enum TT {
   BIN = "BIN", // 二进制
   FLOAT = "FLOAT", // 浮点数
   STRING = "STRING", // 字符串
-  SPACE = "SPACE", // " "
   LPAREN = "LPAREN", // (
   RPAREN = "RPAREN", // )
   LBLOCK = "LBLOCK", // {
@@ -19,7 +18,6 @@ export enum TT {
   QMAKE = "QMAKE", // ?
   COMMA = "COMMA", // ,
   ARROW = "ARROW", // =>
-  COMMENT = "COMMENT", // 注释
   DOT = "DOT", // .
 
   LSPAN = "LSPAN",
