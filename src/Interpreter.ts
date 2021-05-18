@@ -149,7 +149,14 @@ export class Interpreter {
     }
   }
   visitAtKey(node: AtKeyNode, context: Context): BaseValue {
-    return this.visit(node.left, context).atKey(node.key.value);
+    if (node.op.is(TT.DOT)) {
+      return this.visit(node.left, context).atKey(node.key.value);
+    } else {
+      const left = this.visit(node.left, context);
+      return left instanceof NullValue
+        ? new NullValue()
+        : left.atKey(node.key.value);
+    }
   }
   visitAtIndex(node: AtIndexNode, context: Context): BaseValue {
     return this.visit(node.left, context).atIndex(
@@ -443,7 +450,7 @@ export class Interpreter {
         throw `Identifier '${name}' has already been declared`;
       }
     }
-    
+
     return new NullValue();
   }
 

@@ -519,7 +519,7 @@ export class AtKeyNode extends BaseNode {
     return NT.AT_KEY;
   }
 
-  constructor(public left: BaseNode, public key: Token) {
+  constructor(public left: BaseNode, public op: Token, public key: Token) {
     super();
   }
 }

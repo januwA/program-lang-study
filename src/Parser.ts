@@ -507,16 +507,22 @@ export class Parser {
     // … . …
     while (this.token.is(TT.DOT)) {
       change = true;
-      left = this.atKey(left);
+      left = this.atKey(left, TT.DOT);
+    }
+
+    // … ?. …
+    while (this.token.is(TT.OPT_CHAIN)) {
+      change = true;
+      left = this.atKey(left, TT.OPT_CHAIN);
     }
 
     return change ? this.propExpr(left) : left;
   }
 
-  private atKey(left: BaseNode): BaseNode {
-    this.matchToken(TT.DOT);
+  private atKey(left: BaseNode, type: TT): BaseNode {
+    const op = this.matchToken(type);
     const key = this.matchToken(TT.IDENTIFIER);
-    return new AtKeyNode(left, key);
+    return new AtKeyNode(left, op, key);
   }
 
   private call(name: BaseNode): BaseNode {

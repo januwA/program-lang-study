@@ -88,6 +88,9 @@ export class Lexer {
             return new Token(TT.NULLISH_EQ, "??=", posStart, this.pos);
           }
           return new Token(TT.NULLISH, "??", posStart, this.pos);
+        } else if ((this.c as string) === ".") {
+          this.next();
+          return new Token(TT.OPT_CHAIN, "?.", posStart, this.pos);
         } else {
           return new Token(TT.QMAKE, "?", posStart);
         }

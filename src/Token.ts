@@ -19,6 +19,7 @@ export enum TT {
   COMMA = "COMMA", // ,
   ARROW = "ARROW", // =>
   DOT = "DOT", // .
+  OPT_CHAIN = "OPT_CHAIN", // ?. 可选链
 
   LSPAN = "LSPAN",
   RSPAN = "RSPAN",

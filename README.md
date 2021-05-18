@@ -175,3 +175,11 @@ List add() => [1];
 
 (map { 'name': "ajanuw", 'lst': [1] }).lst[0]   => 1
 ```
+
+## Optional chaining
+```
+> map{  }.a?.b?.x
+null
+
+> map{  }.a.b.x // error
+```
