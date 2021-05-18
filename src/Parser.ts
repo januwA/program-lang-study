@@ -29,12 +29,13 @@ import {
   TextSpanNode,
   UnaryNode,
   VarAccessNode,
-  VarAssignNode,
   VarDeclareNode,
   WhileNode,
 } from "./BaseNode";
 import { KEYWORDS, Keyword } from "./Keywords";
 import { Token, TT } from "./Token";
+
+export const INVALID_BINARY_OP = -1;
 
 /**
  * 将token表解析为AST语法树
@@ -163,7 +164,11 @@ export class Parser {
       return 3;
     }
 
-    return 0;
+    if (token.is(TT.COMMA)) {
+      return 0;
+    }
+
+    return INVALID_BINARY_OP;
   }
 
   private getUnaryOperatorPrecedence(token: Token): number {
@@ -178,7 +183,7 @@ export class Parser {
     ) {
       return 17;
     }
-    return 0;
+    return INVALID_BINARY_OP;
   }
 
   parse(): BaseNode {
@@ -235,7 +240,7 @@ export class Parser {
           result = this.breakStatement();
           break;
         default:
-          result = this.assignExpr();
+          result = this.expr();
       }
     } else if (token.is(TT.IDENTIFIER)) {
       // a
@@ -244,22 +249,19 @@ export class Parser {
 
       const t: Token | null = this.peek(2);
       if (!t) {
-        result = this.assignExpr();
+        result = this.expr();
       } else if (t.is(TT.EQ)) {
         result = this.varDeclare();
       } else if (t.is(TT.LPAREN)) {
         result = this.fun();
       } else {
-        result = this.assignExpr();
+        result = this.expr();
       }
     } else {
-      result = this.assignExpr();
+      result = this.expr();
     }
 
-    while (this.token.is(TT.SEMICOLON)) {
-      this.next();
-    }
-
+    while (this.token.is(TT.SEMICOLON)) this.next();
     return result;
   }
 
@@ -288,7 +290,7 @@ export class Parser {
     } else if (this.token.is(TT.ARROW)) {
       // 箭头函数
       this.next();
-      body = this.assignExpr();
+      body = this.expr();
     }
     return new FunNode(retType.value, name, params, body);
   }
@@ -319,7 +321,7 @@ export class Parser {
 
     // ret
     // 1
-    if (retRow === valueToken.posStart.row) value = this.assignExpr();
+    if (retRow === valueToken.posStart.row) value = this.expr();
     return new RetNode(value);
   }
 
@@ -349,7 +351,7 @@ export class Parser {
     const type = this.matchToken(TT.IDENTIFIER);
     const name = this.matchToken(TT.IDENTIFIER);
     this.matchToken(TT.EQ);
-    const value = this.assignExpr();
+    const value = this.expr();
     return new VarDeclareNode(isConst, type, name, value);
   }
 
@@ -357,7 +359,7 @@ export class Parser {
     this.matchKeywordToken(Keyword.while);
 
     this.matchToken(TT.LPAREN);
-    const condition = this.assignExpr();
+    const condition = this.expr();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -370,10 +372,10 @@ export class Parser {
     const init = this.varDeclare();
     this.matchToken(TT.SEMICOLON);
 
-    const condition = this.assignExpr();
+    const condition = this.expr();
     this.matchToken(TT.SEMICOLON);
 
-    const step = this.assignExpr();
+    const step = this.expr();
     this.matchToken(TT.RPAREN);
 
     const bodyNode = this.statement();
@@ -386,7 +388,7 @@ export class Parser {
     const cases: { condition: BaseNode; then: BaseNode }[] = [];
 
     this.matchToken(TT.LPAREN);
-    const condition = this.assignExpr();
+    const condition = this.expr();
     this.matchToken(TT.RPAREN);
     const thenNode = this.statement();
     cases.push({
@@ -397,7 +399,7 @@ export class Parser {
     while (this.token.value === Keyword.elif) {
       this.next();
       this.matchToken(TT.LPAREN);
-      const condition = this.assignExpr();
+      const condition = this.expr();
       this.matchToken(TT.RPAREN);
       const thenNode = this.statement();
       cases.push({
@@ -414,107 +416,81 @@ export class Parser {
     return new IfNode(cases, elseNode);
   }
 
-  /**
-   * 赋值表达式
-   */
-  private assignExpr(): BaseNode {
-    // a = 1
-    // a += 1
-    const name = this.token;
-    if (name.is(TT.IDENTIFIER)) {
-      const t1 = this.peek(1);
-      if (
-        t1.isOr([
-          TT.EQ,
-          TT.PLUS_EQ,
-          TT.MINUS_EQ,
-          TT.MUL_EQ,
-          TT.DIV_EQ,
-          TT.POW_EQ,
-          TT.REMAINDER_EQ,
-          TT.SHL_EQ,
-          TT.SHR_EQ,
-          TT.BAND_EQ,
-          TT.XOR_EQ,
-          TT.BOR_EQ,
-          TT.AND_EQ,
-          TT.OR_EQ,
-          TT.NULLISH_EQ,
-        ])
-      ) {
-        this.next();
-        const operator = this.token;
-        this.next();
-        const value = this.assignExpr();
-        return new VarAssignNode(name, operator, value);
-      } else if (t1.isOr([TT.PPLUS, TT.MMINUS])) {
-        this.next();
-        const operator = this.token;
-        this.next();
-        return new VarAssignNode(name, operator, null);
-      } else {
-        return this.binaryExpr();
-      }
-    } else {
-      let result = this.binaryExpr();
-
-      if (this.token.is(TT.QMAKE)) {
-        return this.ternaryExpr(result);
-      } else {
-        return result;
-      }
+  private expr(parentPrecedence = INVALID_BINARY_OP): BaseNode {
+    let left = this.binaryExpr(parentPrecedence);
+    if (this.token.is(TT.QMAKE)) {
+      left = this.ternaryExpr(left);
     }
+    return left;
   }
 
   /**
    * 三元表达式
-   * <condition> ? <binaryExpr> : <binaryExpr>
+   * <expr> ? <expr> : <expr>
    */
   private ternaryExpr(condition: BaseNode) {
     this.matchToken(TT.QMAKE);
-    const thenNode = this.assignExpr();
+    const thenNode = this.expr();
     this.matchToken(TT.COLON);
-    const elseNode = this.assignExpr();
+    const elseNode = this.expr();
     return new TernaryNode(condition, thenNode, elseNode);
   }
 
-  private binaryExpr(parentPrecedence = 0): BaseNode {
+  private binaryExpr(
+    parentPrecedence = INVALID_BINARY_OP,
+    lr = true // 默认从左到右
+  ): BaseNode {
     let left: BaseNode;
 
     const unaryPrecedence = this.getUnaryOperatorPrecedence(this.token);
-    if (unaryPrecedence !== 0 && unaryPrecedence >= parentPrecedence) {
+    if (
+      unaryPrecedence !== INVALID_BINARY_OP &&
+      unaryPrecedence >= parentPrecedence
+    ) {
       left = this.unaryExpr(unaryPrecedence);
     } else {
       left = this.atom();
-      left = this.propExpr(left);
+
+      if (this.token.isOr([TT.PPLUS, TT.MMINUS])) {
+        // 后置运算 a++ a--
+        const op = this.token;
+        this.next();
+        left = new UnaryNode(op, left, true);
+      } else {
+        left = this.propExpr(left);
+      }
     }
 
     while (true) {
       const precedence = this.getBinaryOperatorPrecedence(this.token);
-      if (precedence === 0 || precedence <= parentPrecedence) break;
+      if (precedence === INVALID_BINARY_OP) break;
 
-      const operator = this.token;
+      if (lr ? precedence <= parentPrecedence : precedence < parentPrecedence)
+        break;
+
+      const op = this.token;
       this.next();
-      const right = this.binaryExpr(precedence);
-      left = new BinaryNode(left, operator, right);
+      const right = this.binaryExpr(precedence, precedence !== 3);
+      left = new BinaryNode(left, op, right);
     }
     return left;
   }
 
   private propExpr(left: BaseNode): BaseNode {
     let change: boolean = false;
-    // a()
+    // … ( … )
     while (this.token.is(TT.LPAREN)) {
       change = true;
       left = this.call(left);
     }
 
-    // a[ 1 ]
+    // … [ … ]
     while (this.token.is(TT.LSQUARE)) {
       change = true;
       left = this.atIndex(left);
     }
 
+    // … . …
     while (this.token.is(TT.DOT)) {
       change = true;
       left = this.atKey(left);
@@ -535,11 +511,7 @@ export class Parser {
     if (this.token.is(TT.RPAREN)) {
       this.next();
     } else {
-      args.push(this.binaryExpr());
-      while (this.token.is(TT.COMMA)) {
-        this.next();
-        args.push(this.binaryExpr());
-      }
+      this._itemExpres(args);
       this.matchToken(TT.RPAREN);
     }
 
@@ -548,14 +520,14 @@ export class Parser {
 
   private atIndex(left: BaseNode): BaseNode {
     this.matchToken(TT.LSQUARE);
-    const index = this.assignExpr();
+    const index = this.expr();
     this.matchToken(TT.RSQUARE);
     return new AtIndexNode(left, index);
   }
 
   private unaryExpr(unaryPrecedence: number): BaseNode {
-    const token = this.token;
-    if (token.is(TT.LPAREN)) {
+    const op = this.token;
+    if (op.is(TT.LPAREN)) {
       this.matchToken(TT.LPAREN);
       const conversionType = this.matchToken(TT.IDENTIFIER);
       this.matchToken(TT.RPAREN);
@@ -564,7 +536,7 @@ export class Parser {
     } else {
       this.next();
       const _node: BaseNode = this.binaryExpr(unaryPrecedence);
-      return new UnaryNode(token, _node);
+      return new UnaryNode(op, _node);
     }
   }
 
@@ -592,7 +564,7 @@ export class Parser {
       this.next();
       const nodes: BaseNode[] = [];
       while (!this.token.is(TT.RSPAN)) {
-        nodes.push(this.assignExpr());
+        nodes.push(this.expr());
       }
       this.next();
       return new TextSpanNode(nodes);
@@ -615,7 +587,7 @@ export class Parser {
       }
     } else if (token.is(TT.LPAREN)) {
       this.next();
-      const _expr = this.assignExpr();
+      const _expr = this.expr();
       this.matchToken(TT.RPAREN);
       return _expr;
     } else if (token.is(TT.LSQUARE)) {
@@ -638,11 +610,7 @@ export class Parser {
     if (this.token.is(TT.RSQUARE)) {
       this.next();
     } else {
-      items.push(this.assignExpr());
-      while (this.token.is(TT.COMMA)) {
-        this.next();
-        items.push(this.assignExpr());
-      }
+      this._itemExpres(items);
       this.matchToken(TT.RSQUARE);
     }
     return new ListNode(items);
@@ -661,9 +629,9 @@ export class Parser {
     } else {
       let key: BaseNode, value: BaseNode;
       while (!this.token.is(TT.RBLOCK)) {
-        key = this.assignExpr();
+        key = this.expr();
         this.matchToken(TT.COLON);
-        value = this.assignExpr();
+        value = this.expr();
         if (!this.token.is(TT.RBLOCK)) {
           this.matchToken(TT.COMMA);
         }
@@ -673,5 +641,17 @@ export class Parser {
     }
 
     return new MapNode(map);
+  }
+
+  private _itemExpres(items: BaseNode[]): BaseNode[] {
+    // 传入1跳过 COMMA 二元表达式
+    const skipCommaOpPrecedence = 1;
+
+    items.push(this.expr(skipCommaOpPrecedence));
+    while (this.token.is(TT.COMMA)) {
+      this.next();
+      items.push(this.expr(skipCommaOpPrecedence));
+    }
+    return items;
   }
 }

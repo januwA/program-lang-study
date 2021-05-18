@@ -25,12 +25,11 @@ import {
   TextSpanNode,
   UnaryNode,
   VarAccessNode,
-  VarAssignNode,
   VarDeclareNode,
   WhileNode,
 } from "./BaseNode";
 import { BaseNode } from "./BaseNode";
-import { TT } from "./Token";
+import { Token, TT } from "./Token";
 import {
   BaseFunctionValue,
   BaseValue,
@@ -104,8 +103,6 @@ export class Interpreter {
         return this.visitUnary(node as UnaryNode, context);
       case NT.VarDeclare:
         return this.visitVarDeclare(node as VarDeclareNode, context);
-      case NT.VarAssign:
-        return this.visitVarAssign(node as VarAssignNode, context);
       case NT.VarAccess:
         return this.visitVarAccess(node as VarAccessNode, context);
       case NT.BLOCK:
@@ -152,7 +149,7 @@ export class Interpreter {
     }
   }
   visitAtKey(node: AtKeyNode, context: Context): BaseValue {
-    return this.visit(node.left, context).atKey( node.key.value );
+    return this.visit(node.left, context).atKey(node.key.value);
   }
   visitAtIndex(node: AtIndexNode, context: Context): BaseValue {
     return this.visit(node.left, context).atIndex(
@@ -343,62 +340,62 @@ export class Interpreter {
     }
   }
 
-  // 赋值变量
-  visitVarAssign(node: VarAssignNode, context: Context): BaseValue {
-    const name = node.name.value;
+  /**
+   * a = 1
+   * a += 1
+   *
+   * 1 = 1 // error
+   * @param left
+   * @param op
+   * @param value
+   * @param context
+   * @returns
+   */
+  _varAssign(
+    left: BaseNode,
+    op: Token,
+    value: BaseValue,
+    context: Context
+  ): BaseValue {
+    if (left.id() !== NT.VarAccess) {
+      throw `Invalid left-hand`;
+    }
+
+    const name = (left as VarAccessNode).name.value;
+
     if (context.hasVariable(name)) {
       const varSymbol = context.getVariable(name);
       if (varSymbol.isConst) {
         throw `Assignment to constant variable.`;
       }
 
-      // 后置运算
-      if (node.operator.isOr([TT.PPLUS, TT.MMINUS])) {
-        const oldValue = varSymbol.value;
-        const one = new IntValue(1);
-        const newValue = node.operator.is(TT.PPLUS)
-          ? varSymbol.value.add(one)
-          : varSymbol.value.sub(one);
-        varSymbol.value = newValue;
-
-        if (varSymbol.type !== BaseTypes.auto) {
-          const valueType: string = newValue.typeof();
-          if (valueType !== varSymbol.type && valueType !== BaseTypes.Null) {
-            throw `The ${valueType} type cannot be assigned to the ${varSymbol.type} type`;
-          }
-        }
-
-        return oldValue;
-      }
-
-      let value: BaseValue = this.visit(node.value, context);
-      if (node.operator.is(TT.PLUS_EQ)) {
+      if (op.is(TT.PLUS_EQ)) {
         value = varSymbol.value.add(value);
-      } else if (node.operator.is(TT.MINUS_EQ)) {
+      } else if (op.is(TT.MINUS_EQ)) {
         value = varSymbol.value.sub(value);
-      } else if (node.operator.is(TT.MUL_EQ)) {
+      } else if (op.is(TT.MUL_EQ)) {
         value = varSymbol.value.mul(value);
-      } else if (node.operator.is(TT.DIV_EQ)) {
+      } else if (op.is(TT.DIV_EQ)) {
         value = varSymbol.value.mul(value);
-      } else if (node.operator.is(TT.POW_EQ)) {
+      } else if (op.is(TT.POW_EQ)) {
         value = varSymbol.value.pow(value);
-      } else if (node.operator.is(TT.REMAINDER_EQ)) {
+      } else if (op.is(TT.REMAINDER_EQ)) {
         value = varSymbol.value.remainder(value);
-      } else if (node.operator.is(TT.SHL_EQ)) {
+      } else if (op.is(TT.SHL_EQ)) {
         value = varSymbol.value.shl(value);
-      } else if (node.operator.is(TT.SHR_EQ)) {
+      } else if (op.is(TT.SHR_EQ)) {
         value = varSymbol.value.shr(value);
-      } else if (node.operator.is(TT.BAND_EQ)) {
+      } else if (op.is(TT.BAND_EQ)) {
         value = varSymbol.value.band(value);
-      } else if (node.operator.is(TT.XOR_EQ)) {
+      } else if (op.is(TT.XOR_EQ)) {
         value = varSymbol.value.xor(value);
-      } else if (node.operator.is(TT.BOR_EQ)) {
+      } else if (op.is(TT.BOR_EQ)) {
         value = varSymbol.value.bor(value);
-      } else if (node.operator.is(TT.AND_EQ)) {
+      } else if (op.is(TT.AND_EQ)) {
         value = varSymbol.value.and(value);
-      } else if (node.operator.is(TT.OR_EQ)) {
+      } else if (op.is(TT.OR_EQ)) {
         value = varSymbol.value.or(value);
-      } else if (node.operator.is(TT.NULLISH_EQ)) {
+      } else if (op.is(TT.NULLISH_EQ)) {
         value = varSymbol.value.nullishCoalescing(value);
       }
 
@@ -441,7 +438,7 @@ export class Interpreter {
   }
 
   visitUnary(node: UnaryNode, context: Context) {
-    switch (node.token.type) {
+    switch (node.op.type) {
       case TT.MINUS:
         return this.visit(node.node, context).mul(new IntValue(-1));
       case TT.PLUS:
@@ -450,8 +447,9 @@ export class Interpreter {
         return this.visit(node.node, context).not();
       case TT.BNOT:
         return this.visit(node.node, context).bnot();
-      case TT.PPLUS:
-      case TT.MMINUS:
+
+      case TT.PPLUS: // 递增
+      case TT.MMINUS: // 递减
         if (node.node.id() !== NT.VarAccess) {
           throw `Invalid left-hand side expression in prefix operation`;
         }
@@ -460,17 +458,18 @@ export class Interpreter {
         const name = varAccessNode.name.value;
         if (context.hasVariable(name)) {
           const varSymbol = context.getVariable(name);
+          const oldValue = varSymbol.value;
           const one = new IntValue(1);
-          varSymbol.value = node.token.is(TT.PPLUS)
+          varSymbol.value = node.op.is(TT.PPLUS)
             ? varSymbol.value.add(one)
             : varSymbol.value.sub(one);
-          return varSymbol.value;
+          return node.postOp ? oldValue : varSymbol.value;
         } else {
           throw `${name} is not defined`;
         }
 
       case TT.IDENTIFIER: {
-        switch (node.token.value) {
+        switch (node.op.value) {
           case BaseTypes.int:
             return this.visit(node.node, context).toInt();
           case BaseTypes.float:
@@ -480,11 +479,11 @@ export class Interpreter {
           case BaseTypes.bool:
             return this.visit(node.node, context).toBool();
           default:
-            throw `Type conversion failed ${node.token.value}`;
+            throw `Type conversion failed ${node.op.value}`;
         }
       }
       default:
-        throw `Runtime Error: Unexpected token '${node.token.type}'`;
+        throw `Runtime Error: Unexpected token '${node.op.type}'`;
     }
   }
 
@@ -532,6 +531,26 @@ export class Interpreter {
         return left.ne(right);
       case TT.NULLISH:
         return left.nullishCoalescing(right);
+      case TT.COMMA:
+        return right;
+
+      // 赋值
+      case TT.EQ:
+      case TT.PLUS_EQ:
+      case TT.MINUS_EQ:
+      case TT.MUL_EQ:
+      case TT.DIV_EQ:
+      case TT.POW_EQ:
+      case TT.REMAINDER_EQ:
+      case TT.SHL_EQ:
+      case TT.SHR_EQ:
+      case TT.BAND_EQ:
+      case TT.XOR_EQ:
+      case TT.BOR_EQ:
+      case TT.AND_EQ:
+      case TT.OR_EQ:
+      case TT.NULLISH_EQ:
+        return this._varAssign(node.left, node.operator, right, context);
       default:
         break;
     }

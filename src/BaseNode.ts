@@ -34,7 +34,7 @@ export enum NT {
   LIST,
   MAP,
   AT_INDEX,
-  AT_KEY
+  AT_KEY,
 }
 
 export abstract class BaseNode {
@@ -134,9 +134,13 @@ export class UnaryNode extends BaseNode {
     return NT.UNARY;
   }
   toString(): string {
-    return `(${this.token.value})${this.node.toString()}`;
+    return `(${this.op.value})${this.node.toString()}`;
   }
-  constructor(public token: Token, public node: BaseNode) {
+  constructor(
+    public op: Token,
+    public node: BaseNode,
+    public postOp: boolean = false, // 后置运算(先返回值，在运算)
+  ) {
     super();
   }
 }
@@ -214,30 +218,6 @@ export class VarDeclareNode extends BaseNode {
     public type: Token,
     public name: Token,
     public value: BaseNode
-  ) {
-    super();
-  }
-}
-
-/**
- * 变量赋值
- *
- * a = 1
- * a += 1
- */
-export class VarAssignNode extends BaseNode {
-  id(): NT {
-    return NT.VarAssign;
-  }
-  toString(): string {
-    return `${this.name.value} ${
-      this.operator.value
-    } ${this.value?.toString()}`;
-  }
-  constructor(
-    public name: Token,
-    public operator: Token,
-    public value?: BaseNode
   ) {
     super();
   }
@@ -526,7 +506,7 @@ export class AtIndexNode extends BaseNode {
  * a.name ()
  * a.name []
  */
- export class AtKeyNode extends BaseNode {
+export class AtKeyNode extends BaseNode {
   toString(): string {
     return `${this.left.toString()}.${this.key.value}`;
   }

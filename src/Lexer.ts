@@ -7,6 +7,7 @@ const DEC_EXP = /[\d\.]/;
 const NUMBER_EXP = /[a-f\d\._]/i;
 const IDENT_EXP = /[a-z_]/i;
 const IDENT_BODY_EXP = /\w/;
+const EOF_CHAR = "\0";
 
 const escapeCaracters = {
   n: "\n",
@@ -22,7 +23,7 @@ export class Lexer {
   constructor(private text: string) {}
 
   get c(): string {
-    if (this.pos.index >= this.text.length) return "\0";
+    if (this.pos.index >= this.text.length) return EOF_CHAR;
     else return this.text[this.pos.index];
   }
 
@@ -32,11 +33,14 @@ export class Lexer {
 
   makeTokens(): Token[] {
     const tokens: Token[] = [];
-    while (this.c !== "\0") {
+    let tok: Token;
+    while (true) {
+      if (tok && tok.is(TT.EOF)) break;
       if (this.c === "$") {
         this.mkTextSpan(tokens);
       } else {
-        tokens.push(this.nextToken());
+        tok = this.nextToken();
+        tokens.push(tok);
       }
     }
     return tokens;
@@ -53,7 +57,7 @@ export class Lexer {
 
     const posStart: Position = this.pos.copy();
     switch (this.c) {
-      case "\0":
+      case EOF_CHAR:
         return new Token(TT.EOF, "EOF", this.pos);
 
       case " ":
@@ -295,7 +299,7 @@ export class Lexer {
     const posStart: Position = this.pos.copy();
     let type = TT.IDENTIFIER;
     let val: string = "";
-    while (IDENT_BODY_EXP.test(this.c)) {
+    while (this.c !== EOF_CHAR && IDENT_BODY_EXP.test(this.c)) {
       val += this.c;
       this.next();
     }
@@ -307,23 +311,16 @@ export class Lexer {
   mkTextSpan(tokens: Token[]) {
     let posStart = this.pos.copy();
     tokens.push(new Token(TT.LSPAN, "LSPAN", this.pos));
-
     this.next();
-    const c = this.c;
-    if (c !== '"' && c !== "'") {
-      throw "";
-    }
 
+    const startChar = this.c;
+    if (startChar !== '"' && startChar !== "'") throw "";
     this.next();
 
     let val = "";
     let escapeCharacter = false;
 
-    while (true) {
-      if ((this.c as string) === "\0") {
-        throw "";
-      }
-
+    while (this.c !== EOF_CHAR && this.c !== startChar) {
       if (escapeCharacter) {
         val += escapeCaracters[this.c] || this.c;
         escapeCharacter = false;
@@ -345,29 +342,19 @@ export class Lexer {
         }
         this.next();
 
-        while ((this.c as string) !== "}") {
-          if ((this.c as string) === "\0") {
-            throw "";
-          }
-
+        while ((this.c as string) !== EOF_CHAR && (this.c as string) !== "}") {
           tokens.push(this.nextToken());
         }
-
         this.next();
         posStart = this.pos.copy();
       }
 
-      if (this.c === c) {
-        if (val) {
-          tokens.push(new Token(TT.STRING, val, posStart, this.pos));
-        }
-        break;
-      }
-
+      if (this.c === startChar) break;
       val += this.c;
       this.next();
     }
 
+    if (val.length) tokens.push(new Token(TT.STRING, val, posStart, this.pos));
     tokens.push(new Token(TT.RSPAN, "RSPAN", this.pos));
     this.next();
   }
@@ -378,7 +365,7 @@ export class Lexer {
     let escapeCharacter = false;
 
     this.next();
-    while (this.c !== c || escapeCharacter) {
+    while (this.c !== EOF_CHAR && (this.c !== c || escapeCharacter)) {
       if (escapeCharacter) {
         val += escapeCaracters[this.c] || this.c;
         escapeCharacter = false;
@@ -413,7 +400,7 @@ export class Lexer {
       this.next();
       if (/\d/.test(this.c)) {
         type = TT.FLOAT;
-        while (/\d/.test(this.c)) {
+        while (/\d/.test(this.c) && (this.c as string) !== "\0") {
           val += this.c;
           this.next();
         }
@@ -447,7 +434,7 @@ export class Lexer {
       }
     }
 
-    while (NUMBER_EXP.test(this.c)) {
+    while (this.c !== EOF_CHAR && NUMBER_EXP.test(this.c)) {
       if (this.c === ".") {
         if (type !== TT.DEC) throw `Syntax Error: Unexpected hex`;
         if (isFloat) break;
@@ -501,7 +488,7 @@ export class Lexer {
     while (
       (this.c as string) !== "\n" &&
       (this.c as string) !== "\r" &&
-      (this.c as string) !== "\0"
+      (this.c as string) !== EOF_CHAR
     ) {
       this.next();
     }
