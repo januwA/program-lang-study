@@ -33,4 +33,7 @@ const waitForUserInput = function () {
 
 waitForUserInput();
 
-// run(`map{  }.a?.b`);
+// run(`
+// auto m = map { "name": "ajanuw" };
+// m.name;
+// `);

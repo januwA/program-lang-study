@@ -96,6 +96,12 @@ List arr = [1,2]
 map { "key": "value" }
 
 Map a = map { "key": "value" }
+
+auto m = map { "name": 1 }
+m.name = 2;
+m["name"] = 2;
+
+m.a = 2; // Error: a is not defined
 ```
 
 # Conversion

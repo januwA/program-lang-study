@@ -8,12 +8,8 @@ export class VariableSymbol {
   ) {}
 }
 
-export class LabelSymbol {
-  constructor(public name: string) {}
-}
-
 abstract class BaseMap<T> {
-  private symbols: { [name: string]: T } = {};
+  symbols: { [name: string]: T } = {};
   constructor() {}
 
   get(name: string): T {
@@ -30,14 +26,10 @@ abstract class BaseMap<T> {
 }
 
 export class VariableMap extends BaseMap<VariableSymbol> {}
-export class LabelMap extends BaseMap<LabelSymbol> {}
 
 export class Context {
-  private variables: VariableMap = new VariableMap();
-  labels: LabelMap = new LabelMap();
-
-  constructor(private parent: Context | null) {}
-
+  variables: VariableMap = new VariableMap();
+  constructor(public parent: Context | null) {}
   setVariable(name: string, value: VariableSymbol): boolean {
     if (this.variables.has(name)) {
       this.variables.set(name, value);
@@ -58,7 +50,7 @@ export class Context {
   }
 
   getVariable(name: string): VariableSymbol {
-    return this.variables.get(name) || this.parent.getVariable(name);
+    return this.variables.get(name) || this.parent?.getVariable(name);
   }
 
   hasVariable(name: string): boolean {

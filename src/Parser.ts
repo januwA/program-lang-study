@@ -649,9 +649,9 @@ export class Parser {
     } else {
       let key: BaseNode, value: BaseNode;
       while (!this.token.is(TT.RBLOCK)) {
-        key = this.expr();
+        key = this.expr(SKIP_COMMA_PRECEDENCE);
         this.matchToken(TT.COLON);
-        value = this.expr();
+        value = this.expr(SKIP_COMMA_PRECEDENCE);
         if (!this.token.is(TT.RBLOCK)) {
           this.matchToken(TT.COMMA);
         }

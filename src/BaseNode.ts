@@ -1,5 +1,4 @@
-import { LabelSymbol } from "./Context";
-import { Token, TT } from "./Token";
+import { Token } from "./Token";
 
 // AST Node
 
@@ -39,10 +38,6 @@ export enum NT {
 
 export abstract class BaseNode {
   static labelCound = 0;
-  static GeneratorLabel(): LabelSymbol {
-    const name = `label{${BaseNode.labelCound}}`;
-    return new LabelSymbol(name);
-  }
   abstract toString(): string;
   abstract id(): NT;
 }
@@ -339,32 +334,6 @@ export class ForNode extends BaseNode {
   }
 }
 
-// 定义label
-export class LabelNode extends BaseNode {
-  toString(): string {
-    return ``;
-  }
-  id(): NT {
-    return NT.LABEL;
-  }
-  constructor(public label: LabelSymbol) {
-    super();
-  }
-}
-
-// 无条件跳转
-export class JmpNode extends BaseNode {
-  toString(): string {
-    return `jmp ${this.label.name}`;
-  }
-  id(): NT {
-    return NT.JMP;
-  }
-  constructor(public label: LabelSymbol) {
-    super();
-  }
-}
-
 export class CallNode extends BaseNode {
   toString(): string {
     return `${this.name.toString()}(${this.args
@@ -508,8 +477,7 @@ export class AtIndexNode extends BaseNode {
 
 /**
  * a.name
- * a.name ()
- * a.name []
+ * a?.name
  */
 export class AtKeyNode extends BaseNode {
   toString(): string {

@@ -148,9 +148,11 @@ export class Interpreter {
         throw `Runtime Error: Unrecognized node ${node}`;
     }
   }
+  
   visitAtKey(node: AtKeyNode, context: Context): BaseValue {
     if (node.op.is(TT.DOT)) {
-      return this.visit(node.left, context).atKey(node.key.value);
+      const left: BaseValue = this.visit(node.left, context);
+      return left.atKey(node.key.value);
     } else {
       const left = this.visit(node.left, context);
       return left instanceof NullValue
@@ -158,25 +160,38 @@ export class Interpreter {
         : left.atKey(node.key.value);
     }
   }
+
   visitAtIndex(node: AtIndexNode, context: Context): BaseValue {
     return this.visit(node.left, context).atIndex(
       this.visit(node.index, context)
     );
   }
+
   visitMap(node: MapNode, context: Context): BaseValue {
-    const map: { key: BaseValue; value: BaseValue }[] = node.map.map(
-      (it: { key: BaseNode; value: BaseNode }) => ({
-        key: this.visit(it.key, context),
-        value: this.visit(it.value, context),
-      })
-    );
-    return new MapValue(map);
+    const mapContext = new Context(null);
+    for (const it of node.map) {
+      const key: string = this.visit(it.key, context).toStr().value;
+      const value: BaseValue = this.visit(it.value, context);
+      mapContext.declareVariable(
+        key,
+        new VariableSymbol(false, BaseTypes.auto, value)
+      );
+    }
+    return new MapValue(mapContext);
   }
 
   visitList(node: ListNode, context: Context): BaseValue {
-    const items = node.items.map((n) => this.visit(n, context));
-    return new ListValue(items);
+    const listContext = new Context(null);
+    node.items.forEach((n, index) => {
+      const value = this.visit(n, context);
+      listContext.declareVariable(
+        index.toString(),
+        new VariableSymbol(false, BaseTypes.auto, value)
+      );
+    });
+    return new ListValue(listContext);
   }
+
   visitTernary(node: TernaryNode, context: Context): BaseValue {
     if (this.visit(node.condition, context).isTren()) {
       return this.visit(node.thenNode, context);
@@ -359,17 +374,11 @@ export class Interpreter {
    * @returns
    */
   _varAssign(
-    left: BaseNode,
+    name: string,
     op: Token,
     value: BaseValue,
     context: Context
   ): BaseValue {
-    if (left.id() !== NT.VarAccess) {
-      throw `Invalid left-hand`;
-    }
-
-    const name = (left as VarAccessNode).name.value;
-
     if (context.hasVariable(name)) {
       const varSymbol = context.getVariable(name);
       if (varSymbol.isConst) {
@@ -567,7 +576,38 @@ export class Interpreter {
       case TT.AND_EQ:
       case TT.OR_EQ:
       case TT.NULLISH_EQ:
-        return this._varAssign(node.left, node.operator, right, context);
+        if (node.left instanceof VarAccessNode) {
+          // a = 1
+          return this._varAssign(
+            node.left.name.value,
+            node.operator,
+            right,
+            context
+          );
+        } else if (node.left instanceof AtKeyNode) {
+          // a.k = 1
+          const atKeyNode = node.left;
+          const leftVal = this.visit(atKeyNode.left, context);
+          return this._varAssign(
+            atKeyNode.key.value,
+            node.operator,
+            right,
+            leftVal.context
+          );
+        } else if (node.left instanceof AtIndexNode) {
+          // a['k'] = 1
+          const atIndexNode = node.left;
+          const leftVal = this.visit(atIndexNode.left, context);
+          const index = this.visit(atIndexNode.index, context);
+          return this._varAssign(
+            index.toStr().value,
+            node.operator,
+            right,
+            leftVal.context
+          );
+        } else {
+          throw `Invalid left-hand`;
+        }
       default:
         break;
     }

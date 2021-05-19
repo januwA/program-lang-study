@@ -4,6 +4,7 @@ import { BaseNode, FunParam } from "./BaseNode";
 import { BaseTypes } from "./BaseTypes";
 
 export abstract class BaseValue {
+  abstract context: Context;
   abstract toString(): string;
 
   abstract typeof(): string;
@@ -51,6 +52,7 @@ export abstract class BaseValue {
 }
 
 export class IntValue extends BaseValue {
+  context: Context = new Context(null);
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
@@ -219,6 +221,7 @@ export class IntValue extends BaseValue {
 }
 
 export class FloatValue extends BaseValue {
+  context: Context = new Context(null);
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
@@ -373,6 +376,7 @@ export class FloatValue extends BaseValue {
 }
 
 export class BoolValue extends BaseValue {
+  context: Context = new Context(null);
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
@@ -478,6 +482,7 @@ export class BoolValue extends BaseValue {
 }
 
 export class NullValue extends BaseValue {
+  context: Context = new Context(null);
   atIndex(index: BaseValue): BaseValue {
     throw new Error("Method not implemented.");
   }
@@ -582,6 +587,7 @@ export class NullValue extends BaseValue {
 }
 
 export class StringValue extends BaseValue {
+  context: Context = new Context(null);
   atIndex(index: BaseValue): BaseValue {
     if (index instanceof IntValue) {
       return new StringValue(this.value[index.value]);
@@ -929,19 +935,18 @@ export class BuiltInFunction extends BaseFunctionValue {
 
 export class ListValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
-    if (index instanceof IntValue) {
-      return this.items[index.value];
-    }
-
-    if (index instanceof StringValue) {
-      return this.items[index.value];
-    }
+    return this.context.getVariable(index.toStr().value)?.value ?? new NullValue();
   }
   atKey(key: string): BaseValue {
-    throw new Error("Method not implemented.");
+    return this.context.getVariable(key)?.value ?? new NullValue();
   }
   toString(): string {
-    return `[${this.items.map((v) => v.toString()).toString()}]`;
+    let str = '';
+    for (const index in this.context.variables.symbols) {
+      const value = this.context.variables.get(index);
+      str += `${value.value.toString()},`;
+    }
+    return `[${str}]`;
   }
   typeof(): string {
     return BaseTypes.List;
@@ -1027,32 +1032,24 @@ export class ListValue extends BaseValue {
   toBool(): BoolValue {
     return new BoolValue(true);
   }
-  constructor(public items: BaseValue[]) {
+  constructor(public context: Context) {
     super();
   }
 }
 
 export class MapValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
-    for (const it of this.map) {
-      if (it.key.ee(index)) {
-        return it.value;
-      }
-    }
-    return new NullValue();
+    return this.context.getVariable(index.toStr().value).value;
   }
   atKey(key: string): BaseValue {
-    for (const it of this.map) {
-      if (it.key.toStr().value === key) {
-        return it.value;
-      }
-    }
-    return new NullValue();
+    const val = this.context.getVariable(key);
+    return val ? val.value : new NullValue();
   }
   toString(): string {
     let str = "";
-    for (const it of this.map) {
-      str += `${it.key.toString()}:${it.value.toString()},`;
+    for (const it in this.context.variables.symbols) {
+      const value = this.context.variables.get(it);
+      str += `${it}:${value.value.toString()},`;
     }
     return `map {${str}}`;
   }
@@ -1141,7 +1138,7 @@ export class MapValue extends BaseValue {
     return new BoolValue(true);
   }
 
-  constructor(public map: { key: BaseValue; value: BaseValue }[]) {
+  constructor(public context: Context) {
     super();
   }
 }
