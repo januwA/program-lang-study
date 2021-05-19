@@ -12,6 +12,10 @@ abstract class BaseMap<T> {
   symbols: { [name: string]: T } = {};
   constructor() {}
 
+  size(): number {
+    return Object.keys(this.symbols).length;
+  }
+
   get(name: string): T {
     return this.symbols[name];
   }

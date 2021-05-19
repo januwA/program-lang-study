@@ -89,7 +89,30 @@ const fun a = add
 [1,2]
 
 List arr = [1,2]
+arr[0] = 2;
 ```
+
+## size()
+```
+> auto a = [1,2]
+null
+> a.size()
+2
+```
+
+## push()
+```
+> auto a = []
+null
+> a.push(1)
+1
+> a.push(2)
+2
+> a
+[1,2]
+```
+
+---
 
 # Map
 ```

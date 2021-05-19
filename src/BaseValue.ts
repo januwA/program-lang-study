@@ -935,17 +935,20 @@ export class BuiltInFunction extends BaseFunctionValue {
 
 export class ListValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
-    return this.context.getVariable(index.toStr().value)?.value ?? new NullValue();
+    return (
+      this.context.getVariable(index.toStr().value)?.value ?? new NullValue()
+    );
   }
   atKey(key: string): BaseValue {
     return this.context.getVariable(key)?.value ?? new NullValue();
   }
   toString(): string {
-    let str = '';
-    for (const index in this.context.variables.symbols) {
-      const value = this.context.variables.get(index);
+    let str = "";
+    for (const index in this.itemsContext.variables.symbols) {
+      const value = this.itemsContext.variables.get(index);
       str += `${value.value.toString()},`;
     }
+    str = str.replace(/,$/, "");
     return `[${str}]`;
   }
   typeof(): string {
@@ -1032,8 +1035,56 @@ export class ListValue extends BaseValue {
   toBool(): BoolValue {
     return new BoolValue(true);
   }
+
+  itemsContext: Context;
+
   constructor(public context: Context) {
     super();
+    this.itemsContext = context;
+    this.context = new Context(context);
+
+    this.context.declareVariable(
+      "size",
+      new VariableSymbol(
+        true,
+        BaseTypes.fun,
+        new BuiltInFunction(
+          BaseTypes.int,
+          "size",
+          [],
+          (ctx, self: BuiltInFunction) => {
+            return new IntValue(context.variables.size());
+          },
+          context
+        )
+      )
+    );
+
+    this.context.declareVariable(
+      "push",
+      new VariableSymbol(
+        true,
+        BaseTypes.fun,
+        new BuiltInFunction(
+          BaseTypes.int,
+          "push",
+          [{ isConst: true, name: "item", type: BaseTypes.auto }],
+          (ctx, self: BuiltInFunction) => {
+            const size: number = this.itemsContext.variables.size();
+            context.declareVariable(
+              size.toString(),
+              new VariableSymbol(
+                false,
+                BaseTypes.auto,
+                ctx.getVariable("item").value
+              )
+            );
+            return new IntValue(size + 1);
+          },
+          context
+        )
+      )
+    );
   }
 }
 
