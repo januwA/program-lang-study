@@ -9,11 +9,11 @@ import { BaseTypes } from "./BaseTypes";
 
 const globalContext: Context = new Context(null);
 
-globalContext.declareVariable(
+globalContext.Declare(
   "print",
   new VariableSymbol(true, BaseTypes.fun, BuiltInFunction.print(globalContext))
 );
-globalContext.declareVariable(
+globalContext.Declare(
   "typeof",
   new VariableSymbol(true, BaseTypes.fun, BuiltInFunction.typeof(globalContext))
 );

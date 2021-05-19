@@ -1,4 +1,4 @@
-import { Context, VariableSymbol } from "./Context";
+import { Context, ListContext, VariableSymbol } from "./Context";
 import {
   AtIndexNode,
   AtKeyNode,
@@ -148,7 +148,7 @@ export class Interpreter {
         throw `Runtime Error: Unrecognized node ${node}`;
     }
   }
-  
+
   visitAtKey(node: AtKeyNode, context: Context): BaseValue {
     if (node.op.is(TT.DOT)) {
       const left: BaseValue = this.visit(node.left, context);
@@ -170,26 +170,23 @@ export class Interpreter {
   visitMap(node: MapNode, context: Context): BaseValue {
     const mapContext = new Context(null);
     for (const it of node.map) {
-      const key: string = this.visit(it.key, context).toStr().value;
+      const key: string = this.visit(it.key, context).toString().value;
       const value: BaseValue = this.visit(it.value, context);
-      mapContext.declareVariable(
-        key,
-        new VariableSymbol(false, BaseTypes.auto, value)
-      );
+      mapContext.Declare(key, new VariableSymbol(false, BaseTypes.auto, value));
     }
     return new MapValue(mapContext);
   }
 
   visitList(node: ListNode, context: Context): BaseValue {
-    const listContext = new Context(null);
+    const ctx = new Context(null);
     node.items.forEach((n, index) => {
       const value = this.visit(n, context);
-      listContext.declareVariable(
+      ctx.Declare(
         index.toString(),
         new VariableSymbol(false, BaseTypes.auto, value)
       );
     });
-    return new ListValue(listContext);
+    return new ListValue(new ListContext(ctx));
   }
 
   visitTernary(node: TernaryNode, context: Context): BaseValue {
@@ -203,7 +200,7 @@ export class Interpreter {
   visitTextSpan(node: TextSpanNode, context: Context): BaseValue {
     let result: string = "";
     for (const it of node.nodes) {
-      result += this.visit(it, context).toStr().value;
+      result += this.visit(it, context).toString().value;
     }
     return new StringValue(result);
   }
@@ -233,10 +230,7 @@ export class Interpreter {
       node.body,
       context
     );
-    context.declareVariable(
-      node.name.value,
-      new VariableSymbol(true, "fun", value)
-    );
+    context.Declare(node.name.value, new VariableSymbol(true, "fun", value));
     return new NullValue();
   }
 
@@ -252,7 +246,7 @@ export class Interpreter {
       outCall();
       return value;
     } else {
-      throw `${funValue.toString()} is not a function`;
+      throw `${funValue.toJsString()} is not a function`;
     }
   }
 
@@ -355,8 +349,8 @@ export class Interpreter {
   // 使用变量
   visitVarAccess(node: VarAccessNode, context: Context): BaseValue {
     const name = node.name.value;
-    if (context.hasVariable(name)) {
-      return context.getVariable(name).value;
+    if (context.Has(name)) {
+      return context.Get(name).value;
     } else {
       throw `${name} is not defined`;
     }
@@ -379,8 +373,8 @@ export class Interpreter {
     value: BaseValue,
     context: Context
   ): BaseValue {
-    if (context.hasVariable(name)) {
-      const varSymbol = context.getVariable(name);
+    if (context.Has(name)) {
+      const varSymbol = context.Get(name);
       if (varSymbol.isConst) {
         throw `Assignment to constant variable.`;
       }
@@ -433,31 +427,28 @@ export class Interpreter {
 
     for (const it of node.items) {
       const name: string = it.name.value;
-      if (context.canDeclareVariable(name)) {
-        const value: BaseValue = it.value
-          ? this.visit(it.value, context)
-          : new NullValue();
-
-        // check type
-        // auto 能设置任意属性的value
-        // null 能设置给任何变量
-        const valueType: string = value.typeof();
-        if (
-          type !== BaseTypes.auto &&
-          valueType !== BaseTypes.Null &&
-          valueType !== type
-        ) {
-          throw `The ${valueType} type cannot be assigned to the ${type} type`;
-        }
-
-        context.declareVariable(
-          name,
-          new VariableSymbol(node.isConst, type, value)
-        );
-      } else {
+      if (context.Has(name)) {
         // 当前作用域内，不能再次定义
         throw `Identifier '${name}' has already been declared`;
       }
+
+      const value: BaseValue = it.value
+        ? this.visit(it.value, context)
+        : new NullValue();
+
+      // check type
+      // auto 能设置任意属性的value
+      // null 能设置给任何变量
+      const valueType: string = value.typeof();
+      if (
+        type !== BaseTypes.auto &&
+        valueType !== BaseTypes.Null &&
+        valueType !== type
+      ) {
+        throw `The ${valueType} type cannot be assigned to the ${type} type`;
+      }
+
+      context.Declare(name, new VariableSymbol(node.isConst, type, value));
     }
 
     return new NullValue();
@@ -482,8 +473,8 @@ export class Interpreter {
 
         const varAccessNode = node.node as VarAccessNode;
         const name = varAccessNode.name.value;
-        if (context.hasVariable(name)) {
-          const varSymbol = context.getVariable(name);
+        if (context.Has(name)) {
+          const varSymbol = context.Get(name);
           const oldValue = varSymbol.value;
           const one = new IntValue(1);
           varSymbol.value = node.op.is(TT.PPLUS)
@@ -501,7 +492,7 @@ export class Interpreter {
           case BaseTypes.float:
             return this.visit(node.node, context).toFloat();
           case BaseTypes.string:
-            return this.visit(node.node, context).toStr();
+            return this.visit(node.node, context).toString();
           case BaseTypes.bool:
             return this.visit(node.node, context).toBool();
           default:
@@ -600,7 +591,7 @@ export class Interpreter {
           const leftVal = this.visit(atIndexNode.left, context);
           const index = this.visit(atIndexNode.index, context);
           return this._varAssign(
-            index.toStr().value,
+            index.toString().value,
             node.operator,
             right,
             leftVal.context

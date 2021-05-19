@@ -5,8 +5,6 @@ import { BaseTypes } from "./BaseTypes";
 
 export abstract class BaseValue {
   abstract context: Context;
-  abstract toString(): string;
-
   abstract typeof(): string;
 
   abstract not(): BoolValue;
@@ -44,7 +42,8 @@ export abstract class BaseValue {
   // Conversion
   abstract toInt(): IntValue;
   abstract toFloat(): FloatValue;
-  abstract toStr(): StringValue;
+  abstract toString(): StringValue;
+  abstract toJsString(): string;
   abstract toBool(): BoolValue;
 
   abstract atIndex(index: BaseValue): BaseValue;
@@ -59,8 +58,8 @@ export class IntValue extends BaseValue {
   atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toInt(): IntValue {
     return this;
@@ -212,7 +211,7 @@ export class IntValue extends BaseValue {
 
     throw new Error("BaseValue div.");
   }
-  toString(): string {
+  toJsString(): string {
     return this.value.toString();
   }
   constructor(public value: number) {
@@ -228,8 +227,8 @@ export class FloatValue extends BaseValue {
   atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toInt(): IntValue {
     return new IntValue(parseInt(this.value.toString(), 10));
@@ -367,7 +366,7 @@ export class FloatValue extends BaseValue {
 
     throw new Error("BaseValue div.");
   }
-  toString(): string {
+  toJsString(): string {
     return this.value.toString();
   }
   constructor(public value: number) {
@@ -383,8 +382,8 @@ export class BoolValue extends BaseValue {
   atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toInt(): IntValue {
     return new IntValue(+this.value);
@@ -461,7 +460,7 @@ export class BoolValue extends BaseValue {
   not(): BoolValue {
     return new BoolValue(!this.value);
   }
-  toString(): string {
+  toJsString(): string {
     return this.value ? "true" : "false";
   }
   add(other: BaseValue): BaseValue {
@@ -489,8 +488,8 @@ export class NullValue extends BaseValue {
   atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toInt(): IntValue {
     return new IntValue(0);
@@ -512,7 +511,7 @@ export class NullValue extends BaseValue {
     return BaseTypes.Null;
   }
 
-  toString(): string {
+  toJsString(): string {
     return "null";
   }
   not(): BoolValue {
@@ -600,7 +599,7 @@ export class StringValue extends BaseValue {
   atKey(key: string): BaseValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
+  toString(): StringValue {
     return new StringValue(this.value);
   }
   toInt(): IntValue {
@@ -612,7 +611,7 @@ export class StringValue extends BaseValue {
   toBool(): BoolValue {
     return new BoolValue(!!this.value);
   }
-  toString(): string {
+  toJsString(): string {
     return `"${this.value}"`;
   }
   typeof(): string {
@@ -712,14 +711,14 @@ export abstract class BaseFunctionValue extends BaseValue {
   toFloat(): FloatValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toBool(): BoolValue {
     return new BoolValue(true);
   }
 
-  toString(): string {
+  toJsString(): string {
     return `${this.returnType} ${this.name.toString()}(${this.params
       .map((it) => `${it.type} ${it.name}`)
       .toString()}) {}`;
@@ -852,7 +851,7 @@ export class FunctionValue extends BaseFunctionValue {
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
       const param: FunParam = this.params[i];
-      newContext.declareVariable(
+      newContext.Declare(
         param.name,
         new VariableSymbol(param.isConst, param.type, arg)
       );
@@ -894,7 +893,7 @@ export class BuiltInFunction extends BaseFunctionValue {
     for (let i = 0; i < args.length; i++) {
       const arg: BaseValue = args[i];
       const param: FunParam = this.params[i];
-      newContext.declareVariable(
+      newContext.Declare(
         param.name,
         new VariableSymbol(param.isConst, param.type, arg)
       );
@@ -913,7 +912,7 @@ export class BuiltInFunction extends BaseFunctionValue {
       "print",
       [{ isConst: true, name: "input", type: BaseTypes.auto }],
       (context, self: BuiltInFunction) => {
-        console.log(context.getVariable("input").value.toString());
+        console.log(context.Get("input").value.toJsString());
         return new NullValue();
       },
       context
@@ -926,7 +925,7 @@ export class BuiltInFunction extends BaseFunctionValue {
       "typeof",
       [{ isConst: true, type: BaseTypes.auto, name: "data" }],
       (context, self: BuiltInFunction) => {
-        return new StringValue(context.getVariable("data").value.typeof());
+        return new StringValue(context.Get("data").value.typeof());
       },
       context
     );
@@ -935,18 +934,16 @@ export class BuiltInFunction extends BaseFunctionValue {
 
 export class ListValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
-    return (
-      this.context.getVariable(index.toStr().value)?.value ?? new NullValue()
-    );
+    return this.context.Get(index.toString().value)?.value ?? new NullValue();
   }
   atKey(key: string): BaseValue {
-    return this.context.getVariable(key)?.value ?? new NullValue();
+    return this.context.Get(key)?.value ?? new NullValue();
   }
-  toString(): string {
+  toJsString(): string {
     let str = "";
-    for (const index in this.itemsContext.variables.symbols) {
-      const value = this.itemsContext.variables.get(index);
-      str += `${value.value.toString()},`;
+    for (const index in this.context.parent.variables.symbols) {
+      const value = this.context.parent.variables.get(index);
+      str += `${value.value.toJsString()},`;
     }
     str = str.replace(/,$/, "");
     return `[${str}]`;
@@ -1029,78 +1026,31 @@ export class ListValue extends BaseValue {
   toFloat(): FloatValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toBool(): BoolValue {
     return new BoolValue(true);
   }
 
-  itemsContext: Context;
-
   constructor(public context: Context) {
     super();
-    this.itemsContext = context;
-    this.context = new Context(context);
-
-    this.context.declareVariable(
-      "size",
-      new VariableSymbol(
-        true,
-        BaseTypes.fun,
-        new BuiltInFunction(
-          BaseTypes.int,
-          "size",
-          [],
-          (ctx, self: BuiltInFunction) => {
-            return new IntValue(context.variables.size());
-          },
-          context
-        )
-      )
-    );
-
-    this.context.declareVariable(
-      "push",
-      new VariableSymbol(
-        true,
-        BaseTypes.fun,
-        new BuiltInFunction(
-          BaseTypes.int,
-          "push",
-          [{ isConst: true, name: "item", type: BaseTypes.auto }],
-          (ctx, self: BuiltInFunction) => {
-            const size: number = this.itemsContext.variables.size();
-            context.declareVariable(
-              size.toString(),
-              new VariableSymbol(
-                false,
-                BaseTypes.auto,
-                ctx.getVariable("item").value
-              )
-            );
-            return new IntValue(size + 1);
-          },
-          context
-        )
-      )
-    );
   }
 }
 
 export class MapValue extends BaseValue {
   atIndex(index: BaseValue): BaseValue {
-    return this.context.getVariable(index.toStr().value).value;
+    return this.context.Get(index.toString().value).value;
   }
   atKey(key: string): BaseValue {
-    const val = this.context.getVariable(key);
+    const val = this.context.Get(key);
     return val ? val.value : new NullValue();
   }
-  toString(): string {
+  toJsString(): string {
     let str = "";
     for (const it in this.context.variables.symbols) {
       const value = this.context.variables.get(it);
-      str += `${it}:${value.value.toString()},`;
+      str += `${it}:${value.value.toJsString()},`;
     }
     return `map {${str}}`;
   }
@@ -1182,8 +1132,8 @@ export class MapValue extends BaseValue {
   toFloat(): FloatValue {
     throw new Error("Method not implemented.");
   }
-  toStr(): StringValue {
-    return new StringValue(this.toString());
+  toString(): StringValue {
+    return new StringValue(this.toJsString());
   }
   toBool(): BoolValue {
     return new BoolValue(true);

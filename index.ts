@@ -22,7 +22,7 @@ const waitForUserInput = function () {
     try {
       const value = run(src);
       oldText = "";
-      console.log(value.toString());
+      console.log(value.toJsString());
     } catch (error: any) {
       oldText += text + "\n";
       oldText = "";
