@@ -15,7 +15,7 @@ process.stdin.on("keypress", (str, key) => {
 });
 
 const waitForUserInput = function () {
-  const query = oldText ? ". " : "> ";
+  const query = oldText ? "... " : ">>> ";
   rl.question(query, (text) => {
     const src: string = oldText + text;
     if (!src) return;
@@ -25,7 +25,6 @@ const waitForUserInput = function () {
       console.log(value.toJsString());
     } catch (error: any) {
       oldText += text + "\n";
-      oldText = "";
     }
     waitForUserInput();
   });

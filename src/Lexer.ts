@@ -19,8 +19,10 @@ const escapeCaracters = {
  * 将源码字符串解析为Token表
  */
 export class Lexer {
-  pos: Position = new Position(0, 0, 0, this.text);
-  constructor(private text: string) {}
+  pos: Position;
+  constructor(private text: string) {
+    this.pos = new Position(0, 0, 0, text);
+  }
 
   get c(): string {
     if (this.pos.index >= this.text.length) return EOF_CHAR;
@@ -290,11 +292,7 @@ export class Lexer {
       }
       default:
         this.next();
-        throw new SyntaxError(
-          "Invalid or unexpected token",
-          posStart,
-          this.pos
-        ).toString();
+        throw new SyntaxError("Invalid or unexpected token", posStart, this.pos).toString();
     }
   }
 
@@ -474,12 +472,7 @@ export class Lexer {
   }
 
   private eatSpace(): Token {
-    while (
-      this.c === " " ||
-      this.c === "\t" ||
-      this.c === "\r" ||
-      this.c === "\n"
-    ) {
+    while (this.c === " " || this.c === "\t" || this.c === "\r" || this.c === "\n") {
       this.next();
     }
     return this.nextToken();
